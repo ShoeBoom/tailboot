@@ -21,23 +21,15 @@ export const AUTH_KEY_PLACEHOLDER =
 
 const placeholderBytes = encoder.encode(AUTH_KEY_PLACEHOLDER);
 
-export type IsoSource = Blob | Response | ReadableStream<Uint8Array>;
-export type PatchProgress = {
-  inputBytes: number;
-  totalBytes?: number;
-};
-
 type PatchOptions = {
-  source: IsoSource;
+  source: Blob;
   accessKey: string;
   destination: WritableStream<Uint8Array>;
-  onProgress?: (progress: PatchProgress) => void;
-  signal?: AbortSignal;
-  totalBytes?: number;
+  onProgress?: (inputBytes: number) => void;
 };
 
 function accessKeyRecord(accessKey: string) {
-  if (typeof accessKey !== "string" || accessKey.length === 0) {
+  if (accessKey.length === 0) {
     throw new TypeError("The Tailscale auth key must be a non-empty string.");
   }
 
@@ -59,11 +51,6 @@ function accessKeyRecord(accessKey: string) {
   return encoder.encode(
     SLOT_START + accessKey.padEnd(AUTH_KEY_CAPACITY, " ") + SLOT_END,
   );
-}
-
-function bytesFrom(chunk: Uint8Array) {
-  if (chunk instanceof Uint8Array) return chunk;
-  throw new TypeError("The ISO stream must contain byte chunks.");
 }
 
 function concatBytes(left: Uint8Array, right: Uint8Array) {
@@ -91,35 +78,15 @@ function indexOfBytes(
   return -1;
 }
 
-function isoStream(source: IsoSource) {
-  if (source instanceof Response) {
-    if (!source.ok) {
-      throw new Error(`ISO download failed with HTTP ${source.status}.`);
-    }
-    if (!source.body) throw new Error("The ISO response has no body.");
-    return source.body;
-  }
-
-  if (source instanceof Blob) return source.stream();
-  return source;
-}
-
-function isoPatcher(
-  accessKey: string,
-  {
-    onProgress,
-    totalBytes,
-  }: Pick<PatchOptions, "onProgress" | "totalBytes"> = {},
-) {
+function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) {
   const replacementBytes = accessKeyRecord(accessKey);
   const overlapSize = placeholderBytes.byteLength - 1;
   let pending = new Uint8Array();
   let inputBytes = 0;
   let matches = 0;
 
-  const stream = new TransformStream({
-    transform(chunk, controller) {
-      const bytes = bytesFrom(chunk);
+  return new TransformStream<Uint8Array, Uint8Array>({
+    transform(bytes, controller) {
       inputBytes += bytes.byteLength;
       let buffer = concatBytes(pending, bytes);
       let emittedThrough = 0;
@@ -140,7 +107,7 @@ function isoPatcher(
       if (emitLength > 0) controller.enqueue(buffer.subarray(0, emitLength));
       pending = buffer.slice(emitLength);
 
-      onProgress?.({ inputBytes, totalBytes });
+      onProgress?.(inputBytes);
     },
 
     flush(controller) {
@@ -157,11 +124,6 @@ function isoPatcher(
       }
     },
   });
-
-  return {
-    stream,
-    result: () => ({ bytesWritten: inputBytes, replacements: matches }),
-  };
 }
 
 /**
@@ -176,23 +138,14 @@ export async function patchTailbootIso({
   accessKey,
   destination,
   onProgress,
-  signal,
-  totalBytes,
 }: PatchOptions) {
-  if (typeof destination?.getWriter !== "function") {
-    throw new TypeError("destination must be a WritableStream.");
-  }
-
   let patcher;
   try {
-    patcher = isoPatcher(accessKey, { onProgress, totalBytes });
+    patcher = isoPatcher(accessKey, onProgress);
   } catch (error) {
     await destination.abort(error);
     throw error;
   }
 
-  await isoStream(source).pipeThrough(patcher.stream).pipeTo(destination, {
-    signal,
-  });
-  return patcher.result();
+  await source.stream().pipeThrough(patcher).pipeTo(destination);
 }

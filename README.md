@@ -4,10 +4,6 @@ Tailboot is a headless Debian 13 live image that automatically joins a
 Tailscale network and enables Tailscale SSH. It is intended to be flashed to a
 USB drive and booted directly; it is not an installer.
 
-The image does not include a conventional SSH server. The build explicitly
-purges and masks OpenSSH server units, and the boot service enables only
-Tailscale's SSH implementation.
-
 ## How customization works
 
 The base ISO contains a fixed-size placeholder in the uncompressed
@@ -54,7 +50,9 @@ sudo ./scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
 The result is written to `dist/`. Builds use Tailscale's official Debian
-repository and include common Wi-Fi and wired-network firmware.
+repository and Debian's `minbase` bootstrap. The image adds only certificates,
+common network firmware, NetworkManager, sudo, and Tailscale; install other
+tools with APT after the machine connects.
 
 The ISO's internal media-check manifest is disabled because customizing
 `/TAILBOOT.KEY` necessarily changes that file. Every GitHub release includes a
@@ -62,10 +60,10 @@ separate SHA-256 file for verifying the unmodified base ISO.
 
 ## Releases and GitHub Pages
 
-[`release.yml`](.github/workflows/release.yml) runs when a `v*` tag is pushed,
-when started manually, and every Monday at 04:17 UTC. Scheduled and manual runs
-create a UTC CalVer tag such as `v2026.09.04.031500`; pushed tags are preserved
-as written.
+[`release.yml`](.github/workflows/release.yml) runs when a CalVer tag is pushed,
+when started manually, and on the first day of each month at 04:17 UTC.
+Scheduled and manual runs create a UTC CalVer tag such as
+`v2026.09.04.031500`; pushed tags must use the same `vYYYY.MM.DD.HHMMSS` format.
 
 1. Build the ISO and publish it plus its SHA-256 checksum to the GitHub release.
 2. Build Astro with that exact release asset URL.

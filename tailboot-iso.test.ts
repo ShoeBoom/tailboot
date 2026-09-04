@@ -6,12 +6,11 @@ import {
   AUTH_KEY_PLACEHOLDER,
   patchTailbootIso,
 } from "./tailboot-iso.ts";
-import type { PatchProgress } from "./tailboot-iso.ts";
 
 const encode = (value: string) => new TextEncoder().encode(value);
 const decode = (value: Uint8Array) => new TextDecoder().decode(value);
 
-function chunkedStream(bytes: Uint8Array, chunkSizes: number[]) {
+function chunkedStream(bytes: Uint8Array<ArrayBuffer>, chunkSizes: number[]) {
   let offset = 0;
   let chunk = 0;
   return new ReadableStream({
@@ -23,6 +22,21 @@ function chunkedStream(bytes: Uint8Array, chunkSizes: number[]) {
       chunk += 1;
     },
   });
+}
+
+class ChunkedBlob extends Blob {
+  readonly data: Uint8Array<ArrayBuffer>;
+  readonly chunkSizes: number[];
+
+  constructor(data: Uint8Array<ArrayBuffer>, chunkSizes: number[]) {
+    super([data]);
+    this.data = data;
+    this.chunkSizes = chunkSizes;
+  }
+
+  override stream() {
+    return chunkedStream(this.data, this.chunkSizes);
+  }
 }
 
 function memoryDestination() {
@@ -53,25 +67,20 @@ test("patches across arbitrary chunk boundaries without changing ISO size", asyn
   const after = "\0fake ISO footer";
   const input = encode(before + AUTH_KEY_PLACEHOLDER + after);
   const output = memoryDestination();
-  const progress: PatchProgress[] = [];
+  const progress: number[] = [];
 
-  const result = await patchTailbootIso({
-    source: chunkedStream(input, [1, 7, 31, 2]),
+  await patchTailbootIso({
+    source: new ChunkedBlob(input, [1, 7, 31, 2]),
     accessKey: "tskey-auth-test-key",
     destination: output.stream,
-    totalBytes: input.byteLength,
-    onProgress: (event) => progress.push(event),
+    onProgress: (inputBytes) => progress.push(inputBytes),
   });
 
   const patched = join(output.chunks);
   assert.equal(patched.byteLength, input.byteLength);
   assert.match(decode(patched), /BEGIN\ntskey-auth-test-key +\nTAILBOOT/);
   assert.equal(decode(patched).includes("~".repeat(AUTH_KEY_CAPACITY)), false);
-  assert.deepEqual(result, { bytesWritten: input.byteLength, replacements: 1 });
-  assert.deepEqual(progress.at(-1), {
-    inputBytes: input.byteLength,
-    totalBytes: input.byteLength,
-  });
+  assert.equal(progress.at(-1), input.byteLength);
 });
 
 test("rejects images without exactly one empty slot", async () => {
