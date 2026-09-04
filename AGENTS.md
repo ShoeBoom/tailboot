@@ -9,5 +9,5 @@
         - This is one of the reasons why we have regular monthly releases that are automated through cron rather than manual verification.
            - Even though there is an automation here, we do want to implement whatever is necessary to make sure that new releases are not broken
 - Things that may cause CI like broken URLs or breaking changes from Debian or tail scale that fails CI are fine. In general, failing fast is good. Do not try to build excessive recovery
-- YAMGI, Do not add things unless they are needed in the moment
+- YANGI, Do not add things unless they are needed in the moment
 
