@@ -108,29 +108,13 @@ jobs:
           fi
 
           assets=$(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
-          if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}"; then
-            if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
-              exit 0
-            fi
-
-            mkdir -p "${RUNNER_TEMP}/released-iso"
-            gh release download "${RELEASE_TAG}" \
-              --pattern "${ISO_NAME}" \
-              --dir "${RUNNER_TEMP}/released-iso"
-            (cd "${RUNNER_TEMP}/released-iso" && sha256sum "${ISO_NAME}") \
-              > "dist/${ISO_NAME}.sha256"
-            gh release upload "${RELEASE_TAG}" "dist/${ISO_NAME}.sha256"
+          if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}" \
+            && printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
             exit 0
           fi
 
-          if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
-            echo "The release has a checksum but no matching ISO; refusing an inconsistent update." >&2
-            exit 1
-          fi
-
-          gh release upload "${RELEASE_TAG}" \
-            "dist/${ISO_NAME}" \
-            "dist/${ISO_NAME}.sha256"
+          echo "The release exists without both expected assets; refusing to modify it." >&2
+          exit 1
 
   build-site:
     needs: release-iso
