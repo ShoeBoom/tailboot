@@ -31,10 +31,10 @@ pnpm install
 pnpm dev
 ```
 
-For a production build, bake in one specific release asset:
+For a production build, provide the proxy origin and release metadata:
 
 ```sh
-PUBLIC_TAILBOOT_ISO_URL="https://tailboot-proxy.YOUR-SUBDOMAIN.workers.dev/v2026.09.04.153117" \
+PUBLIC_TAILBOOT_PROXY_URL="https://tailboot-proxy.YOUR-SUBDOMAIN.workers.dev" \
 PUBLIC_TAILBOOT_ISO_NAME="tailboot-v2026.09.04.153117-amd64.iso" \
 PUBLIC_TAILBOOT_RELEASE="v2026.09.04.153117" \
 PUBLIC_TAILBOOT_ISO_SIZE=895483904 \
@@ -70,7 +70,7 @@ Scheduled and manual runs create a UTC CalVer tag such as
 `v2026.09.04.031500`; pushed tags must use the same `vYYYY.MM.DD.HHMMSS` format.
 
 1. Build the ISO and publish it plus its SHA-256 checksum to the GitHub release.
-2. Build Astro with that exact release asset URL.
+2. Build Astro with the proxy origin and that exact release's metadata.
 3. Deploy the static result to GitHub Pages.
 
 Jobs run in that order. The existing Pages deployment remains active if either
@@ -87,8 +87,9 @@ Before the first deployment:
    origin, such as `https://tailboot-proxy.YOUR-SUBDOMAIN.workers.dev`.
 3. Select **GitHub Actions** as the Pages source in the repository settings.
 
-The workflow uses that origin to construct the pinned ISO URL and reads the
-published asset's size, including when a rerun reuses an existing release.
+The website constructs its download URL from the proxy origin and release tag.
+The workflow reads the published asset's size, including when a rerun reuses an
+existing release.
 No Cloudflare deploy hook is needed.
 
 ## Credential lifecycle

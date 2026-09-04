@@ -32,7 +32,7 @@ pnpm deploy   # Runs checks and tests before deploying.
 
 If needed, authenticate with `pnpm exec wrangler login` first. Set the GitHub
 Actions repository variable `TAILBOOT_PROXY_URL` to the deployed Worker origin.
-The release workflow builds the website's ISO URL from this value and its tag.
+The website constructs its ISO URL from this origin and the supplied release tag.
 
 ## Local development
 
@@ -41,7 +41,7 @@ pnpm dev --port 8787 --var ALLOWED_ORIGIN:http://localhost:4321
 ```
 
 Use the [website's build instructions](../README.md#website) with
-`PUBLIC_TAILBOOT_ISO_URL=http://localhost:8787/<release-tag>`, then run
+`PUBLIC_TAILBOOT_PROXY_URL=http://localhost:8787`, then run
 `pnpm preview` at the repository root and open `http://localhost:4321/tailboot/`.
 Downloads use the published ISO.
 

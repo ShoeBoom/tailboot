@@ -1,10 +1,15 @@
 ---
 import iconUrl from "../../icon.svg?url";
 
-const isoUrl = import.meta.env.PUBLIC_TAILBOOT_ISO_URL ?? "";
+const proxyUrl = import.meta.env.PUBLIC_TAILBOOT_PROXY_URL;
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
 const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
 const isoSize = Number(import.meta.env.PUBLIC_TAILBOOT_ISO_SIZE);
+
+if (import.meta.env.PROD && !proxyUrl) {
+  throw new Error("Set PUBLIC_TAILBOOT_PROXY_URL to the release proxy's origin.");
+}
+const isoUrl = proxyUrl ? new URL(`/${release}`, proxyUrl).href : "";
 
 if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
   throw new Error("Set PUBLIC_TAILBOOT_ISO_SIZE to the published ISO's byte count.");

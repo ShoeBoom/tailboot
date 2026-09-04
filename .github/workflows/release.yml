@@ -21,7 +21,6 @@ jobs:
       contents: write
     outputs:
       iso_name: ${{ steps.metadata.outputs.iso_name }}
-      iso_url: ${{ steps.metadata.outputs.iso_url }}
       release_tag: ${{ steps.metadata.outputs.release_tag }}
       iso_size: ${{ steps.published.outputs.iso_size }}
     steps:
@@ -50,7 +49,6 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PUSHED_TAG: ${{ github.ref_name }}
-          TAILBOOT_PROXY_URL: ${{ vars.TAILBOOT_PROXY_URL }}
         run: |
           if [ "${EVENT_NAME}" = "push" ]; then
             release_tag=${PUSHED_TAG}
@@ -67,10 +65,7 @@ jobs:
           fi
 
           iso_name="tailboot-${release_tag}-amd64.iso"
-          : "${TAILBOOT_PROXY_URL:?Set the TAILBOOT_PROXY_URL repository variable.}"
-          iso_url="${TAILBOOT_PROXY_URL%/}/${release_tag}"
           echo "iso_name=${iso_name}" >> "${GITHUB_OUTPUT}"
-          echo "iso_url=${iso_url}" >> "${GITHUB_OUTPUT}"
           echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
           echo "create_tag=${create_tag}" >> "${GITHUB_OUTPUT}"
           echo "release_commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
@@ -145,11 +140,11 @@ jobs:
         with:
           ref: ${{ needs.release-iso.outputs.release_tag }}
 
-      - name: Build Astro site with the released ISO URL
+      - name: Build Astro site with the release metadata
         uses: withastro/action@v6
         env:
           PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
-          PUBLIC_TAILBOOT_ISO_URL: ${{ needs.release-iso.outputs.iso_url }}
+          PUBLIC_TAILBOOT_PROXY_URL: ${{ vars.TAILBOOT_PROXY_URL }}
           PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
           PUBLIC_TAILBOOT_ISO_SIZE: ${{ needs.release-iso.outputs.iso_size }}
 
