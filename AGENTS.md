@@ -1,0 +1,13 @@
+- Assume that All of our users will Use ephemeral keys that are usable with 90-day expiry and just re-download the ISO whenever the 90-day expiry happens
+  - This does not mean you do any validation or any checks around this. Just assume that that is the only state you will ever have to run into.
+- Idea is not to be a full-fledged rescue/slash recovery drive. It's to be very minimal, just enough to be able to boot and connect to Tailscale network,
+  - Since this is meant to be used with tail scale, users will pretty much expect it to be connected to the internet, in which case we can expect them to install whatever packages, We should not include anything that is more not necessary for booting up
+  - It is paramount that we remain stable. This project should be low maintenance.
+    -  Both Debian and Tailscale are massive projects that are well supported
+      -  We are building a small layer on top of them rather than building an entire product on our own
+      -  Therefore, we will keep this project simple enough where we can rely on the stability of our upstream rather than have to actively maintain this project
+        - This is one of the reasons why we have regular monthly releases that are automated through cron rather than manual verification.
+           - Even though there is an automation here, we do want to implement whatever is necessary to make sure that new releases are not broken
+- Things that may cause CI like broken URLs or breaking changes from Debian or tail scale that fails CI are fine. In general, failing fast is good. Do not try to build excessive recovery
+- YAMGI, Do not add things unless they are needed in the moment
+
