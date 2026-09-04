@@ -4,8 +4,8 @@
   "type": "module",
   "packageManager": "pnpm@11.20.0",
   "scripts": {
-    "dev": "node scripts/prepare-release.ts && astro dev",
-    "build": "node scripts/prepare-release.ts && pnpm test && wrangler types --include-runtime=false --check && astro check && astro build",
+    "dev": "astro dev",
+    "build": "pnpm test && wrangler types --include-runtime=false --check && astro check && astro build",
     "preview": "pnpm build && wrangler dev",
     "test": "node --test test/*.test.ts",
     "types": "wrangler types --include-runtime=false"

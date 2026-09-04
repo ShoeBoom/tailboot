@@ -35,9 +35,9 @@ pnpm dev
 ```
 
 Local builds deliberately have no release ISO configured. A Cloudflare Workers
-Build uses the newest release tag pointing directly at its checked-out commit
-to construct the immutable asset URL. If the commit has no release tag, the
-build fails and the current deployment remains active.
+Build has Astro read the newest release tag pointing directly at its checked-out
+commit and bake the immutable asset URL into the page and Worker. If the commit
+has no release tag, the build fails and the current deployment remains active.
 
 ## Building the image
 
