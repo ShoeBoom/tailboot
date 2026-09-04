@@ -4,6 +4,18 @@ Tailboot is a headless Debian 13 live image that automatically joins a
 Tailscale network and enables Tailscale SSH. It is intended to be flashed to a
 USB drive and booted directly; it is not an installer.
 
+## Logging in
+
+Connect with `ssh tailboot@tailboot` (or use the device's Tailscale IP if its
+name differs). Tailscale authenticates the SSH connection; no local password
+is needed. Your tailnet policy must allow both traffic to port 22 and Tailscale
+SSH to the `tailboot` user. `autogroup:nonroot` includes this account, but
+excludes `root`. Use `sudo -i` after connecting for a root shell.
+
+The local console logs in automatically as `tailboot`. If prompted for a
+login, the username is `tailboot` and Debian Live's default password is `live`.
+The account has passwordless sudo.
+
 ## How customization works
 
 The base ISO contains a fixed-size placeholder in the uncompressed
@@ -54,8 +66,10 @@ sudo ./scripts/build-iso.sh tailboot-local-amd64.iso
 
 The result is written to `dist/`. Builds use Tailscale's official Debian
 repository and Debian's `minbase` bootstrap. The image adds only certificates,
-common network firmware, NetworkManager, sudo, and Tailscale; install other
-tools with APT after the machine connects.
+common network firmware, NetworkManager, sudo, Tailscale, and `user-setup`
+for the live login account; install other tools with APT after the machine
+connects. Because APT recommends are disabled, `user-setup` must be listed
+explicitly. Release verification checks that the login dependencies are installed.
 
 The ISO's internal media-check manifest is disabled because customizing
 `/TAILBOOT.KEY` necessarily changes that file. Every GitHub release includes a

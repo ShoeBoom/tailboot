@@ -24,7 +24,18 @@ xorriso -osirrox on -indev "${iso}" \
 unsquashfs -cat "${work_dir}/filesystem.squashfs" var/lib/dpkg/status \
   > "${work_dir}/dpkg-status"
 
-grep -Fxq "Package: tailscale" "${work_dir}/dpkg-status"
+# live-config creates the login account at boot, so it is not in the image's
+# /etc/passwd yet. Check its dependencies even with APT recommends disabled.
+for package in live-config live-config-systemd user-setup sudo tailscale; do
+  if ! awk -v package="${package}" 'BEGIN { RS = "" }
+    $0 ~ "(^|\n)Package: " package "(\n|$)" &&
+    $0 ~ "(^|\n)Status: install ok installed(\n|$)" { found = 1 }
+    END { exit !found }
+  ' "${work_dir}/dpkg-status"; then
+    echo "Required package is not installed in the ISO: ${package}" >&2
+    exit 1
+  fi
+done
 
 unsquashfs -ll "${work_dir}/filesystem.squashfs" \
   > "${work_dir}/squashfs-files"
@@ -36,4 +47,4 @@ xorriso -indev "${iso}" -report_el_torito plain \
 grep -Fq "BIOS" "${work_dir}/boot-report"
 grep -Fq "UEFI" "${work_dir}/boot-report"
 
-echo "Verified Tailboot key slot, Tailscale, service, and BIOS/UEFI boot records."
+echo "Verified Tailboot key slot, login dependencies, Tailscale, service, and BIOS/UEFI boot records."
