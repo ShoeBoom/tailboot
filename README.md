@@ -38,8 +38,14 @@ network. At boot, `tailboot-configure.service` extracts the auth key into a
 root-only file under `/run/tailboot` for `tailscale up --ssh`. If Wi-Fi is
 configured, it uses `nmcli --offline` to create a root-only connection profile
 under `/run/NetworkManager/system-connections` before NetworkManager starts.
-NetworkManager handles connecting and reconnecting. Ethernet remains enabled
-whether or not Wi-Fi is configured. Wi-Fi profile generation is best-effort,
+NetworkManager handles connecting and reconnecting. Ethernet is preferred;
+the configured Wi-Fi network is the fallback when Ethernet is disconnected or
+has no default route. Both connections can stay active. We leave route metrics
+at NetworkManager's defaults, which favor Ethernet, without custom switching
+logic. This does not detect an upstream internet outage on an otherwise
+connected Ethernet network.
+
+Wi-Fi profile generation is best-effort,
 with a 10-second timeout (and forced termination one second later if needed);
 failures are logged without blocking auth-key setup or Ethernet startup.
 Tailscale does not wait for Wi-Fi scanning or authentication to finish: its join
