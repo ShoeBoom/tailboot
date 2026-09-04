@@ -4,12 +4,11 @@ on:
   push:
     tags:
       - "v*"
+  schedule:
+    # Mondays at 04:17 UTC. Avoid the start of the hour, when scheduled jobs
+    # are more likely to be delayed by GitHub Actions load.
+    - cron: "17 4 * * 1"
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing Git tag to release
-        required: true
-        type: string
 
 concurrency:
   group: tailboot-release-pages
@@ -40,28 +39,39 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
             "${RUNNER_TEMP}/live-build.deb"
 
-      - name: Check out release tag
+      - name: Check out release source
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Define release artifact
         id: metadata
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          PUSHED_TAG: ${{ github.ref_name }}
         run: |
-          case "${RELEASE_TAG}" in
+          if [ "${EVENT_NAME}" = "push" ]; then
+            release_tag=${PUSHED_TAG}
+            create_tag=false
+          else
+            release_tag="v$(date -u +%Y.%m.%d.%H%M%S)"
+            create_tag=true
+          fi
+
+          case "${release_tag}" in
             ""|*[!A-Za-z0-9._-]*)
               echo "Release tags may only contain letters, numbers, dots, underscores, and hyphens." >&2
               exit 1
               ;;
           esac
 
-          iso_name="tailboot-${RELEASE_TAG}-amd64.iso"
-          iso_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${iso_name}"
+          iso_name="tailboot-${release_tag}-amd64.iso"
+          iso_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}/${iso_name}"
           echo "iso_name=${iso_name}" >> "${GITHUB_OUTPUT}"
           echo "iso_url=${iso_url}" >> "${GITHUB_OUTPUT}"
-          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+          echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          echo "create_tag=${create_tag}" >> "${GITHUB_OUTPUT}"
+          echo "release_commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Build ISO
         run: |
@@ -79,15 +89,26 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+          RELEASE_COMMIT: ${{ steps.metadata.outputs.release_commit }}
+          CREATE_TAG: ${{ steps.metadata.outputs.create_tag }}
           ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
         run: |
           if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release create "${RELEASE_TAG}" \
-              "dist/${ISO_NAME}" \
-              "dist/${ISO_NAME}.sha256" \
-              --generate-notes \
-              --title "Tailboot ${RELEASE_TAG}" \
-              --verify-tag
+            if [ "${CREATE_TAG}" = "true" ]; then
+              gh release create "${RELEASE_TAG}" \
+                "dist/${ISO_NAME}" \
+                "dist/${ISO_NAME}.sha256" \
+                --generate-notes \
+                --target "${RELEASE_COMMIT}" \
+                --title "Tailboot ${RELEASE_TAG}"
+            else
+              gh release create "${RELEASE_TAG}" \
+                "dist/${ISO_NAME}" \
+                "dist/${ISO_NAME}.sha256" \
+                --generate-notes \
+                --title "Tailboot ${RELEASE_TAG}" \
+                --verify-tag
+            fi
             exit 0
           fi
 
@@ -125,7 +146,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ needs.release-iso.outputs.release_tag }}
 
       - name: Build Astro site with the released ISO URL
         uses: withastro/action@v6
