@@ -22,6 +22,8 @@ exactly one key slot before completing the file. The key never reaches the proxy
 
 ## Website
 
+The website is hosted on GitHub Pages at <https://tailboot.download/>.
+
 The single-page Astro site is in [`src/pages/index.astro`](src/pages/index.astro)
 and the streaming customizer is [`tailboot-iso.ts`](tailboot-iso.ts).
 
@@ -76,11 +78,33 @@ new website deployment succeeds. Reruns never overwrite an existing ISO asset.
 The timestamp permits multiple releases on the same day without maintaining a
 version counter.
 
-Before the first deployment:
+Domain and deployment setup:
 
 1. Deploy the [proxy](proxy/README.md) with `ALLOWED_ORIGIN` set to
-   `https://shoeboom.github.io`.
-2. Select **GitHub Actions** as the Pages source in the repository settings.
+   `https://tailboot.download`. If using Cloudflare Builds, select `main` as
+   the production branch and deploy the merged commit.
+2. In the repository's **Settings → Pages**, select **GitHub Actions** as the
+   source and save `tailboot.download` as the custom domain.
+3. In Cloudflare DNS, point the apex (`@`) to GitHub Pages using these four
+   **A** records, each with **DNS only** (gray cloud):
+
+   | Name | IPv4 address |
+   | --- | --- |
+   | `@` | `185.199.108.153` |
+   | `@` | `185.199.109.153` |
+   | `@` | `185.199.110.153` |
+   | `@` | `185.199.111.153` |
+
+   Replace conflicting apex address records; leave `proxy.tailboot.download`
+   pointing to the Worker.
+4. Enable **Enforce HTTPS** in GitHub Pages once the certificate is ready.
+5. After merging, run **Build Tailboot release** on `main` to publish the site
+   with root-relative asset paths. Merging alone does not deploy GitHub Pages.
+
+Coordinate the proxy deployment with the domain switch: it accepts only the
+configured website origin. The old GitHub Pages origin is no longer allowed.
+The custom domain is managed in GitHub settings; this Actions deployment does
+not use a `CNAME` file. See GitHub's [custom domain instructions](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
 
 The website downloads from `https://proxy.tailboot.download/<release-tag>`.
 No proxy URL repository variable or Cloudflare deploy hook is needed.
