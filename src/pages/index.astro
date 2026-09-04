@@ -1,4 +1,6 @@
 ---
+import iconUrl from "../../icon.svg?url";
+
 const isoUrl = import.meta.env.PUBLIC_TAILBOOT_ISO_URL ?? "";
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
 const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
@@ -13,6 +15,7 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
       name="description"
       content="Create a Tailboot live ISO with Tailscale SSH enabled."
     />
+    <link rel="icon" href={iconUrl} type="image/svg+xml" />
     <title>Tailboot</title>
   </head>
   <body>
