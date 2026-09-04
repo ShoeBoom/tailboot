@@ -1,14 +1,9 @@
 ---
 import iconUrl from "../../icon.svg?url";
 
-const proxyUrl = import.meta.env.PUBLIC_TAILBOOT_PROXY_URL;
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
-const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
-
-if (import.meta.env.PROD && !proxyUrl) {
-  throw new Error("Set PUBLIC_TAILBOOT_PROXY_URL to the release proxy's origin.");
-}
-const isoUrl = proxyUrl ? new URL(`/${release}`, proxyUrl).href : "";
+const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "";
+const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
 ---
 
 <!doctype html>

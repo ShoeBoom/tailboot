@@ -30,10 +30,9 @@ pnpm install
 pnpm dev
 ```
 
-For a production build, provide the proxy origin and release metadata:
+For a production build, provide the release metadata:
 
 ```sh
-PUBLIC_TAILBOOT_PROXY_URL="https://tailboot-proxy.YOUR-SUBDOMAIN.workers.dev" \
 PUBLIC_TAILBOOT_ISO_NAME="tailboot-v2026.09.04.153117-amd64.iso" \
 PUBLIC_TAILBOOT_RELEASE="v2026.09.04.153117" \
 pnpm build
@@ -68,7 +67,7 @@ Scheduled and manual runs create a UTC CalVer tag such as
 `v2026.09.04.031500`; pushed tags must use the same `vYYYY.MM.DD.HHMMSS` format.
 
 1. Build the ISO and publish it plus its SHA-256 checksum to the GitHub release.
-2. Build Astro with the proxy origin and that exact release's metadata.
+2. Build Astro with that exact release's metadata.
 3. Deploy the static result to GitHub Pages.
 
 Jobs run in that order. The existing Pages deployment remains active if either
@@ -81,12 +80,10 @@ Before the first deployment:
 
 1. Deploy the [proxy](proxy/README.md) with `ALLOWED_ORIGIN` set to
    `https://shoeboom.github.io`.
-2. Set the GitHub Actions repository variable `TAILBOOT_PROXY_URL` to the proxy's
-   origin, such as `https://tailboot-proxy.YOUR-SUBDOMAIN.workers.dev`.
-3. Select **GitHub Actions** as the Pages source in the repository settings.
+2. Select **GitHub Actions** as the Pages source in the repository settings.
 
-The website constructs its download URL from the proxy origin and release tag.
-No Cloudflare deploy hook is needed.
+The website downloads from `https://proxy.tailboot.download/<release-tag>`.
+No proxy URL repository variable or Cloudflare deploy hook is needed.
 
 ## Credential lifecycle
 

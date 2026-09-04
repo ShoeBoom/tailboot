@@ -15,6 +15,11 @@ it forwards no client credentials or range headers.
 
 ## Configuration and deployment
 
+The custom domain `proxy.tailboot.download` is fixed in
+[wrangler.jsonc](wrangler.jsonc). Deploy to the Cloudflare account that manages
+the active `tailboot.download` zone. Cloudflare provisions DNS and TLS for the
+[Worker custom domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/).
+
 Set `vars.ALLOWED_ORIGIN` in [wrangler.jsonc](wrangler.jsonc) to the website's
 origin. It defaults to `https://shoeboom.github.io`. Requests with a different,
 missing, or opaque (`null`) origin are rejected before contacting GitHub.
@@ -30,9 +35,9 @@ pnpm types    # Regenerate after configuration changes.
 pnpm deploy   # Runs checks and tests before deploying.
 ```
 
-If needed, authenticate with `pnpm exec wrangler login` first. Set the GitHub
-Actions repository variable `TAILBOOT_PROXY_URL` to the deployed Worker origin.
-The website constructs its ISO URL from this origin and the supplied release tag.
+If needed, authenticate with `pnpm exec wrangler login` first. The website uses
+`https://proxy.tailboot.download/<release-tag>` directly; no GitHub Actions
+variable is needed for the proxy URL.
 
 ## Local development
 
@@ -40,10 +45,12 @@ The website constructs its ISO URL from this origin and the supplied release tag
 pnpm dev --port 8787 --var ALLOWED_ORIGIN:http://localhost:4321
 ```
 
-Use the [website's build instructions](../README.md#website) with
-`PUBLIC_TAILBOOT_PROXY_URL=http://localhost:8787`, then run
-`pnpm preview` at the repository root and open `http://localhost:4321/tailboot/`.
-Downloads use the published ISO.
+Check a published release locally without downloading the ISO:
+
+```sh
+curl --head -H 'Origin: http://localhost:4321' \
+  http://localhost:8787/v2026.09.04.153117
+```
 
 Run `pnpm check` here for type checks and unit tests. Tests use fake upstream
 responses and do not download release assets.

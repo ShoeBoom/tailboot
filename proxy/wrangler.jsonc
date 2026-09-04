@@ -3,6 +3,9 @@
   "name": "tailboot-proxy",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-04",
+  "routes": [
+    { "pattern": "proxy.tailboot.download", "custom_domain": true }
+  ],
   "vars": {
     "ALLOWED_ORIGIN": "https://shoeboom.github.io"
   },

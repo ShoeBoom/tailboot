@@ -131,7 +131,6 @@ jobs:
         uses: withastro/action@v6
         env:
           PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
-          PUBLIC_TAILBOOT_PROXY_URL: ${{ vars.TAILBOOT_PROXY_URL }}
           PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
 
   deploy-site:
