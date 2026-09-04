@@ -26,6 +26,36 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
         Tailscale SSH connections.
       </p>
 
+      <section aria-labelledby="auth-key-setup">
+        <h2 id="auth-key-setup">Create a Tailscale auth key</h2>
+        <p>
+          Open <a href="https://console.tailscale.com/admin/settings/keys" target="_blank" rel="noreferrer">Tailscale’s Keys settings</a>
+          and select <strong>Generate auth key</strong>. Use these settings:
+        </p>
+        <ul>
+          <li><strong>Description:</strong> <code>tailboot</code> (optional)</li>
+          <li><strong>Reusable:</strong> on</li>
+          <li><strong>Expiration:</strong> 90 days</li>
+          <li><strong>Ephemeral:</strong> on</li>
+          <li><strong>Pre-approved:</strong> on, if shown</li>
+          <li><strong>Tags:</strong> choose an isolated tag (recommended)</li>
+        </ul>
+        <p>
+          We recommend creating a tag such as <code>tag:isolated</code> in
+          <a href="https://console.tailscale.com/admin/acls" target="_blank" rel="noreferrer">Access Controls</a>.
+          Configure your policy so machines with this tag cannot initiate
+          connections to other devices on your tailnet, while allowing you to
+          connect to them with Tailscale SSH. The tag’s name alone does not
+          restrict access: any broad allow rules must also exclude these machines.
+          See <a href="https://tailscale.com/kb/1245/set-up-servers" target="_blank" rel="noreferrer">Tailscale’s server setup guide</a>.
+        </p>
+        <p>
+          Generate the key, then paste it below. Every boot joins as a new
+          ephemeral device. When the key expires, generate a new key and create
+          a new ISO.
+        </p>
+      </section>
+
       <form
         id="customizer"
         data-iso-url={isoUrl}
@@ -201,6 +231,24 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
 
   h1 {
     margin: 0 0 0.5rem;
+  }
+
+  h2 {
+    margin-top: 1.5rem;
+    font-size: 1.15rem;
+  }
+
+  section {
+    line-height: 1.5;
+  }
+
+  ul {
+    padding-left: 1.25rem;
+  }
+
+  a {
+    color: #2457b5;
+    text-underline-offset: 0.15em;
   }
 
   form {
