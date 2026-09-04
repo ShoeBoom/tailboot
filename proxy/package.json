@@ -1,0 +1,18 @@
+{
+  "name": "@tailboot/release-proxy",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "pnpm types --check && tsc --noEmit && pnpm test",
+    "deploy": "pnpm check && wrangler deploy",
+    "test": "node --test test/*.test.ts",
+    "types": "wrangler types --include-runtime=false --strict-vars=false"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "typescript": "^6.0.3",
+    "wrangler": "4.127.1"
+  }
+}

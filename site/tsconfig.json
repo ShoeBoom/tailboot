@@ -2,7 +2,7 @@
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "types": ["node", "./worker-configuration.d.ts"]
+    "types": ["node"]
   },
   "include": [".astro/types.d.ts", "**/*"]
 }

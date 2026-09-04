@@ -19,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+      release_commit: ${{ steps.metadata.outputs.release_commit }}
+      iso_size: ${{ steps.published.outputs.iso_size }}
     steps:
       - name: Install build tools
         run: |
@@ -113,23 +117,48 @@ jobs:
           echo "The release exists without both expected assets; refusing to modify it." >&2
           exit 1
 
-  deploy-site:
+      - name: Read published ISO size
+        id: published
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+          ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
+        run: |
+          # A rerun may reuse an existing asset, so read its size from GitHub.
+          iso_size=$(gh release view "${RELEASE_TAG}" --json assets \
+            --jq ".assets[] | select(.name == \"${ISO_NAME}\") | .size")
+          echo "iso_size=${iso_size}" >> "${GITHUB_OUTPUT}"
+
+  build-site:
     needs: release-iso
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      contents: read
     steps:
-      - name: Trigger the Cloudflare build
-        env:
-          CLOUDFLARE_DEPLOY_HOOK_URL: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -z "${CLOUDFLARE_DEPLOY_HOOK_URL}" ]; then
-            echo "CLOUDFLARE_DEPLOY_HOOK_URL is not configured." >&2
-            exit 1
-          fi
+      - name: Check out release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release-iso.outputs.release_commit }}
 
-          # The URL is the credential. Cloudflare selects the latest published
-          # release during its build; the hook carries no release data.
-          curl --fail --silent --show-error \
-            --request POST \
-            --output /dev/null \
-            "${CLOUDFLARE_DEPLOY_HOOK_URL}"
+      - name: Build static site with the published ISO
+        uses: withastro/action@v6
+        with:
+          out-dir: site/dist
+        env:
+          TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
+          TAILBOOT_ISO_SIZE: ${{ needs.release-iso.outputs.iso_size }}
+          TAILBOOT_PROXY_URL: ${{ vars.TAILBOOT_PROXY_URL }}
+
+  deploy-site:
+    needs: build-site
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

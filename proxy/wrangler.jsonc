@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tailboot-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-04",
+  "vars": {
+    "ALLOWED_ORIGIN": "https://shoeboom.github.io"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

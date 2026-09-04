@@ -1,42 +1,30 @@
-const repository = "https://github.com/ShoeBoom/tailboot";
-
-type GitHubRelease = {
-  tag_name: string;
-  assets: { name: string; state: string; size: number }[];
-};
-
-/** Resolve once during the build so the page and proxy use the same published ISO. */
-export async function getRelease(fetchRelease: typeof fetch = fetch) {
-  const response = await fetchRelease(
-    "https://api.github.com/repos/ShoeBoom/tailboot/releases/latest",
-    {
-      headers: { Accept: "application/vnd.github+json" },
-      signal: AbortSignal.timeout(30_000),
-    },
-  );
-  if (!response.ok) {
-    throw new Error(`Could not load the latest Tailboot release: HTTP ${response.status}.`);
+/** Build the download URL from the release workflow's explicit metadata. */
+export function getRelease(env: Record<string, string | undefined>) {
+  const tag = env.TAILBOOT_RELEASE;
+  if (!tag || !/^v\d{4}\.\d{2}\.\d{2}\.\d{6}$/.test(tag)) {
+    throw new Error("Set TAILBOOT_RELEASE to the published ISO's CalVer tag.");
   }
 
-  const { tag_name: tag, assets } = await response.json() as GitHubRelease;
-  if (!/^v\d{4}\.\d{2}\.\d{2}\.\d{6}$/.test(tag)) {
-    throw new Error("The latest Tailboot release has an unexpected tag.");
+  const size = Number(env.TAILBOOT_ISO_SIZE);
+  if (!Number.isSafeInteger(size) || size <= 0) {
+    throw new Error("Set TAILBOOT_ISO_SIZE to the published ISO's byte count.");
   }
 
-  const isoName = `tailboot-${tag}-amd64.iso`;
-  const iso = assets.find((asset) => asset.name === isoName);
-  const checksum = assets.find((asset) => asset.name === `${isoName}.sha256`);
+  if (!env.TAILBOOT_PROXY_URL) {
+    throw new Error("Set TAILBOOT_PROXY_URL to the release proxy's origin.");
+  }
+  const proxy = new URL(env.TAILBOOT_PROXY_URL);
   if (
-    !iso || iso.state !== "uploaded" || !Number.isSafeInteger(iso.size) || iso.size <= 0 ||
-    !checksum || checksum.state !== "uploaded" || checksum.size <= 0
+    !["http:", "https:"].includes(proxy.protocol) ||
+    proxy.pathname !== "/" || proxy.search || proxy.hash || proxy.username || proxy.password
   ) {
-    throw new Error("The latest Tailboot release is missing its ISO or checksum.");
+    throw new Error("TAILBOOT_PROXY_URL must be an HTTP(S) origin without a path or credentials.");
   }
 
   return {
     tag,
-    isoName,
-    size: iso.size,
-    upstreamUrl: `${repository}/releases/download/${tag}/${isoName}`,
+    isoName: `tailboot-${tag}-amd64.iso`,
+    size,
+    isoUrl: `${proxy.origin}/${tag}`,
   };
 }

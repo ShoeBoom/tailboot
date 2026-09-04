@@ -5,19 +5,16 @@
   "packageManager": "pnpm@11.20.0",
   "scripts": {
     "dev": "astro dev",
-    "build": "pnpm test && wrangler types --include-runtime=false --check && astro check && astro build",
-    "preview": "pnpm build && wrangler dev",
-    "test": "node --test test/*.test.ts",
-    "types": "wrangler types --include-runtime=false"
+    "build": "pnpm test && astro check && astro build",
+    "preview": "astro preview",
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "14.2.5",
     "astro": "^7.2.9"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@types/node": "^26.4.0",
-    "typescript": "^6.0.3",
-    "wrangler": "4.127.1"
+    "typescript": "^6.0.3"
   }
 }

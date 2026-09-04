@@ -1,10 +1,8 @@
 ---
 import iconUrl from "../../icon.svg?url";
-import { release } from "../release.ts";
+import { getRelease } from "../../release.ts";
 
-export const prerender = true;
-
-const isoUrl = release ? `/${release.isoName}` : "";
+const release = import.meta.env.DEV ? null : getRelease(process.env);
 ---
 
 <!doctype html>
@@ -29,7 +27,7 @@ const isoUrl = release ? `/${release.isoName}` : "";
 
       <form
         id="customizer"
-        data-iso-url={isoUrl}
+        data-iso-url={release?.isoUrl}
         data-iso-name={release?.isoName}
         data-iso-size={release?.size}
       >
@@ -113,11 +111,12 @@ const isoUrl = release ? `/${release.isoName}` : "";
           status.textContent = handle
             ? "Downloading and customizing…"
             : "Downloading and customizing in memory… Keep this tab open.";
-          const source = await fetch(isoUrl, { signal: download.signal });
+          const source = await fetch(isoUrl, {
+            signal: download.signal,
+            credentials: "omit",
+          });
           if (source.status !== 200 || !source.body) {
-            throw new Error(source.status === 404
-              ? "A new release is available. Reload the page and try again."
-              : `ISO download failed with HTTP ${source.status}.`);
+            throw new Error(`ISO download failed with HTTP ${source.status}.`);
           }
 
           const chunks: ArrayBuffer[] = [];
