@@ -19,7 +19,6 @@ const placeholderBytes = encoder.encode(AUTH_KEY_PLACEHOLDER);
 
 type PatchOptions = {
   source: Blob | ReadableStream<Uint8Array>;
-  expectedSize: number;
   accessKey: string;
   destination: WritableStream<Uint8Array>;
   onProgress?: (inputBytes: number) => void;
@@ -50,7 +49,7 @@ function indexOfBytes(
   return -1;
 }
 
-function isoPatcher({ accessKey, expectedSize, onProgress }: PatchOptions) {
+function isoPatcher({ accessKey, onProgress }: PatchOptions) {
   const replacementBytes = encoder.encode(
     accessKey.padEnd(AUTH_KEY_CAPACITY, " ") + "\n",
   );
@@ -62,9 +61,6 @@ function isoPatcher({ accessKey, expectedSize, onProgress }: PatchOptions) {
   return new TransformStream<Uint8Array, Uint8Array>({
     transform(bytes, controller) {
       inputBytes += bytes.byteLength;
-      if (inputBytes > expectedSize) {
-        throw new Error("The ISO download exceeds the expected size.");
-      }
       let buffer = concatBytes(pending, bytes);
       let emittedThrough = 0;
       let matchAt = indexOfBytes(buffer, placeholderBytes);
@@ -88,9 +84,6 @@ function isoPatcher({ accessKey, expectedSize, onProgress }: PatchOptions) {
     },
 
     flush(controller) {
-      if (inputBytes !== expectedSize) {
-        throw new Error("The ISO download is incomplete. Please try again.");
-      }
       if (matches === 0) {
         throw new Error(
           "This is not a customizable Tailboot ISO: the auth-key slot was not found.",

@@ -22,7 +22,6 @@ jobs:
     outputs:
       iso_name: ${{ steps.metadata.outputs.iso_name }}
       release_tag: ${{ steps.metadata.outputs.release_tag }}
-      iso_size: ${{ steps.published.outputs.iso_size }}
     steps:
       - name: Install build tools
         run: |
@@ -117,18 +116,6 @@ jobs:
           echo "The release exists without both expected assets; refusing to modify it." >&2
           exit 1
 
-      - name: Read published ISO size
-        id: published
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
-          ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
-        run: |
-          # A rerun may reuse an existing asset, so read its size from GitHub.
-          iso_size=$(gh release view "${RELEASE_TAG}" --json assets \
-            --jq ".assets[] | select(.name == \"${ISO_NAME}\") | .size")
-          echo "iso_size=${iso_size}" >> "${GITHUB_OUTPUT}"
-
   build-site:
     needs: release-iso
     runs-on: ubuntu-latest
@@ -146,7 +133,6 @@ jobs:
           PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
           PUBLIC_TAILBOOT_PROXY_URL: ${{ vars.TAILBOOT_PROXY_URL }}
           PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
-          PUBLIC_TAILBOOT_ISO_SIZE: ${{ needs.release-iso.outputs.iso_size }}
 
   deploy-site:
     needs: build-site

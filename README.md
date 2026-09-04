@@ -17,9 +17,8 @@ site origin and forwards only Tailboot release ISOs. It needs no redeployment
 when a new ISO is published.
 
 Browsers with a file-system writer stream directly to disk. Other browsers hold
-the customized ISO in memory before downloading it. The customizer checks the
-published byte count and requires exactly one key slot before completing the
-file. The key never reaches the proxy.
+the customized ISO in memory before downloading it. The customizer requires
+exactly one key slot before completing the file. The key never reaches the proxy.
 
 ## Website
 
@@ -37,7 +36,6 @@ For a production build, provide the proxy origin and release metadata:
 PUBLIC_TAILBOOT_PROXY_URL="https://tailboot-proxy.YOUR-SUBDOMAIN.workers.dev" \
 PUBLIC_TAILBOOT_ISO_NAME="tailboot-v2026.09.04.153117-amd64.iso" \
 PUBLIC_TAILBOOT_RELEASE="v2026.09.04.153117" \
-PUBLIC_TAILBOOT_ISO_SIZE=895483904 \
 pnpm build
 ```
 
@@ -88,8 +86,6 @@ Before the first deployment:
 3. Select **GitHub Actions** as the Pages source in the repository settings.
 
 The website constructs its download URL from the proxy origin and release tag.
-The workflow reads the published asset's size, including when a rerun reuses an
-existing release.
 No Cloudflare deploy hook is needed.
 
 ## Credential lifecycle

@@ -4,16 +4,11 @@ import iconUrl from "../../icon.svg?url";
 const proxyUrl = import.meta.env.PUBLIC_TAILBOOT_PROXY_URL;
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
 const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
-const isoSize = Number(import.meta.env.PUBLIC_TAILBOOT_ISO_SIZE);
 
 if (import.meta.env.PROD && !proxyUrl) {
   throw new Error("Set PUBLIC_TAILBOOT_PROXY_URL to the release proxy's origin.");
 }
 const isoUrl = proxyUrl ? new URL(`/${release}`, proxyUrl).href : "";
-
-if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
-  throw new Error("Set PUBLIC_TAILBOOT_ISO_SIZE to the published ISO's byte count.");
-}
 ---
 
 <!doctype html>
@@ -40,7 +35,6 @@ if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
         id="customizer"
         data-iso-url={isoUrl}
         data-iso-name={isoName}
-        data-iso-size={isoUrl ? isoSize : undefined}
       >
         <label for="auth-key">Tailscale auth key</label>
         <input
@@ -94,12 +88,10 @@ if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
         const isoUrl = form.dataset.isoUrl;
         if (!isoUrl || button.disabled) return;
         const accessKey = keyInput.value;
-        const expectedSize = Number(form.dataset.isoSize);
 
         button.disabled = true;
         progress.hidden = false;
-        progress.max = expectedSize;
-        progress.value = 0;
+        progress.removeAttribute("value");
         const download = new AbortController();
 
         try {
@@ -129,6 +121,11 @@ if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
           if (source.status !== 200 || !source.body) {
             throw new Error(`ISO download failed with HTTP ${source.status}.`);
           }
+          const downloadSize = Number(source.headers.get("Content-Length"));
+          if (downloadSize > 0) {
+            progress.max = downloadSize;
+            progress.value = 0;
+          }
 
           const chunks: ArrayBuffer[] = [];
           const destination = handle
@@ -142,10 +139,11 @@ if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
               });
           await patchTailbootIso({
             source: source.body,
-            expectedSize,
             accessKey,
             destination,
-            onProgress: (inputBytes) => (progress.value = inputBytes),
+            onProgress: (inputBytes) => {
+              if (downloadSize > 0) progress.value = inputBytes;
+            },
           });
 
           if (!handle) {
@@ -163,7 +161,8 @@ if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
           }
 
           keyInput.value = "";
-          if (progress.max > 0) progress.value = progress.max;
+          progress.max = 1;
+          progress.value = 1;
           status.textContent = "ISO ready. Flash it to a USB drive.";
         } catch (error) {
           progress.hidden = true;
