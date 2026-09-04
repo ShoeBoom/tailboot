@@ -1,10 +1,11 @@
 import { execFileSync } from "node:child_process";
 
+import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
 
-function getRelease() {
-  if (process.env.TAILBOOT_DEV === "1") {
+function getRelease(development: boolean) {
+  if (development) {
     return {
       tag: "development",
       isoName: "tailboot.iso",
@@ -29,13 +30,24 @@ function getRelease() {
   };
 }
 
-export default defineConfig({
-  adapter: cloudflare({ imageService: "passthrough" }),
-  output: "server",
-  session: false,
-  vite: {
-    define: {
-      __TAILBOOT_RELEASE__: JSON.stringify(getRelease()),
+const releaseIntegration = {
+  name: "tailboot-release",
+  hooks: {
+    "astro:config:setup": ({ command, updateConfig }) => {
+      updateConfig({
+        vite: {
+          define: {
+            __TAILBOOT_RELEASE__: JSON.stringify(getRelease(command === "dev")),
+          },
+        },
+      });
     },
   },
+} satisfies AstroIntegration;
+
+export default defineConfig({
+  adapter: cloudflare({ imageService: "passthrough" }),
+  integrations: [releaseIntegration],
+  output: "server",
+  session: false,
 });

@@ -4,7 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@11.20.0",
   "scripts": {
-    "dev": "TAILBOOT_DEV=1 astro dev",
+    "dev": "astro dev",
     "build": "pnpm test && wrangler types --include-runtime=false --check && astro check && astro build",
     "preview": "pnpm build && wrangler dev",
     "test": "node --test test/*.test.ts",
