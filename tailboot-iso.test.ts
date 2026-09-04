@@ -104,3 +104,19 @@ test("rejects images without exactly one empty slot", async () => {
     );
   }
 });
+
+test("aborts the destination on a mid-download network failure", async () => {
+  let aborted = false;
+  let pulls = 0;
+  await assert.rejects(patchTailbootIso({
+    source: new ReadableStream({
+      pull(controller) {
+        if (pulls++ === 0) controller.enqueue(encode(AUTH_KEY_PLACEHOLDER));
+        else controller.error(new Error("connection lost"));
+      },
+    }),
+    accessKey: "tskey-auth-test-key",
+    destination: new WritableStream({ abort() { aborted = true; } }),
+  }), /connection lost/);
+  assert.equal(aborted, true);
+});

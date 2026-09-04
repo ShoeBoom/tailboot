@@ -4,6 +4,6 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": [".astro/types.d.ts", "**/*"]
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["proxy", "dist", "node_modules"]
 }
-

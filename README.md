@@ -11,11 +11,14 @@ The base ISO contains a fixed-size placeholder in the uncompressed
 without changing the length of the image. At boot, the system passes that file
 directly to `tailscale up --ssh`.
 
-GitHub release downloads do not expose the cross-origin browser headers needed
-for a direct `fetch` from GitHub Pages. The site therefore links to its pinned
-base ISO, then streams the user-selected download through the browser's
-file-system writer. Only the current file chunk and a small marker overlap are
-held in the JavaScript heap.
+The site downloads its pinned ISO through the standalone [Cloudflare proxy](proxy/)
+and customizes it locally. The proxy allows browser requests from the configured
+site origin and forwards only Tailboot release ISOs. It needs no redeployment
+when a new ISO is published.
+
+Browsers with a file-system writer stream directly to disk. Other browsers hold
+the customized ISO in memory before downloading it. The customizer requires
+exactly one key slot before completing the file. The key never reaches the proxy.
 
 ## Website
 
@@ -27,12 +30,11 @@ pnpm install
 pnpm dev
 ```
 
-For a production build, bake in one specific release asset:
+For a production build, provide the release metadata:
 
 ```sh
-PUBLIC_TAILBOOT_ISO_URL="https://github.com/ShoeBoom/tailboot/releases/download/v1.0.0/tailboot-v1.0.0-amd64.iso" \
-PUBLIC_TAILBOOT_ISO_NAME="tailboot-v1.0.0-amd64.iso" \
-PUBLIC_TAILBOOT_RELEASE="v1.0.0" \
+PUBLIC_TAILBOOT_ISO_NAME="tailboot-v2026.09.04.153117-amd64.iso" \
+PUBLIC_TAILBOOT_RELEASE="v2026.09.04.153117" \
 pnpm build
 ```
 
@@ -65,7 +67,7 @@ Scheduled and manual runs create a UTC CalVer tag such as
 `v2026.09.04.031500`; pushed tags must use the same `vYYYY.MM.DD.HHMMSS` format.
 
 1. Build the ISO and publish it plus its SHA-256 checksum to the GitHub release.
-2. Build Astro with that exact release asset URL.
+2. Build Astro with that exact release's metadata.
 3. Deploy the static result to GitHub Pages.
 
 Jobs run in that order. The existing Pages deployment remains active if either
@@ -74,8 +76,14 @@ new website deployment succeeds. Reruns never overwrite an existing ISO asset.
 The timestamp permits multiple releases on the same day without maintaining a
 version counter.
 
-Before the first deployment, select **GitHub Actions** as the Pages source in
-the repository settings.
+Before the first deployment:
+
+1. Deploy the [proxy](proxy/README.md) with `ALLOWED_ORIGIN` set to
+   `https://shoeboom.github.io`.
+2. Select **GitHub Actions** as the Pages source in the repository settings.
+
+The website downloads from `https://proxy.tailboot.download/<release-tag>`.
+No proxy URL repository variable or Cloudflare deploy hook is needed.
 
 ## Credential lifecycle
 
@@ -84,9 +92,11 @@ expires, generate another key and customize a new ISO. Every boot creates a new
 ephemeral Tailscale machine identity. The customized image contains the key in
 plain text, so keep it private.
 
-Run all checks with:
+Run the website checks with the release variables above set:
 
 ```sh
 pnpm test
 pnpm build
 ```
+
+Check the independent proxy with `pnpm --dir proxy check`.
