@@ -1,5 +1,6 @@
 ---
 import iconUrl from "../../icon.svg?url";
+import logoUrl from "../../logo.svg?url";
 
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
 const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "";
@@ -19,70 +20,109 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
     <title>Tailboot</title>
   </head>
   <body>
+    <header>
+      <img src={logoUrl} alt="Tailboot" width="1238" height="409" />
+      <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">GitHub</a>
+    </header>
+
     <main>
-      <h1>Tailboot</h1>
-      <p>
-        Create a headless Debian live USB that joins your tailnet and accepts
-        Tailscale SSH connections.
+      <p class="intro">
+        Tailboot is a Debian live image that boots headless, joins your
+        tailnet with an embedded auth key, and enables Tailscale SSH. It
+        installs nothing else; add what you need over SSH.
       </p>
 
-      <section aria-labelledby="auth-key-setup">
-        <h2 id="auth-key-setup">Create a Tailscale auth key</h2>
-        <p>
-          Open <a href="https://console.tailscale.com/admin/settings/keys" target="_blank" rel="noreferrer">Tailscale’s Keys settings</a>
-          and select <strong>Generate auth key</strong>. Use these settings:
-        </p>
-        <ul>
-          <li><strong>Description:</strong> <code>tailboot</code> (optional)</li>
-          <li><strong>Reusable:</strong> on</li>
-          <li><strong>Expiration:</strong> 90 days</li>
-          <li><strong>Ephemeral:</strong> on</li>
-          <li><strong>Pre-approved:</strong> on, if shown</li>
-          <li><strong>Tags:</strong> choose an isolated tag (recommended)</li>
-        </ul>
-        <p>
-          We recommend creating a tag such as <code>tag:isolated</code> in
-          <a href="https://console.tailscale.com/admin/acls" target="_blank" rel="noreferrer">Access Controls</a>.
-          Configure your policy so machines with this tag cannot initiate
-          connections to other devices on your tailnet, while allowing you to
-          connect to them with Tailscale SSH. The tag’s name alone does not
-          restrict access: any broad allow rules must also exclude these machines.
-          See <a href="https://tailscale.com/kb/1245/set-up-servers" target="_blank" rel="noreferrer">Tailscale’s server setup guide</a>.
-        </p>
-        <p>
-          Generate the key, then paste it below. Every boot joins as a new
-          ephemeral device. When the key expires, generate a new key and create
-          a new ISO.
-        </p>
-      </section>
+      <div class="layout">
+        <section aria-labelledby="key-heading">
+          <h2 id="key-heading">1. Create an auth key</h2>
+          <p>
+            In <a href="https://console.tailscale.com/admin/settings/keys" rel="noreferrer">Settings → Keys</a>,
+            choose <strong>Generate auth key</strong>:
+          </p>
+          <table>
+            <tbody>
+              <tr><th scope="row">Description</th><td><code>tailboot</code> (optional)</td></tr>
+              <tr><th scope="row">Reusable</th><td>On</td></tr>
+              <tr><th scope="row">Expiration</th><td>90 days</td></tr>
+              <tr><th scope="row">Ephemeral</th><td>On</td></tr>
+              <tr><th scope="row">Pre-approved</th><td>On, if shown</td></tr>
+              <tr><th scope="row">Tags</th><td>An isolated tag such as <code>tag:isolated</code></td></tr>
+            </tbody>
+          </table>
+          <p>
+            Tagging is recommended. Define the tag in
+            <a href="https://console.tailscale.com/admin/acls" rel="noreferrer">Access Controls</a>
+            and write your policy so tagged machines cannot reach other
+            devices while you can still reach them over Tailscale SSH. The
+            tag alone restricts nothing; broad allow rules must exclude it.
+            See <a href="https://tailscale.com/kb/1245/set-up-servers" rel="noreferrer">Set up servers</a>.
+          </p>
+          <p>
+            Each boot registers a new ephemeral device. When the key
+            expires, generate another and build a new ISO.
+          </p>
+        </section>
 
-      <form
-        id="customizer"
-        data-iso-url={isoUrl}
-        data-iso-name={isoName}
-      >
-        <label for="auth-key">Tailscale auth key</label>
-        <input
-          id="auth-key"
-          type="password"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="tskey-auth-…"
-        />
-        <button type="submit" disabled>Create ISO</button>
-        <noscript>Enable JavaScript to customize an ISO in your browser.</noscript>
-        <progress id="progress" hidden></progress>
-        <p id="status" role="status" aria-live="polite">
-          {isoUrl
-            ? `Base image: ${release}`
-            : "No release image configured."}
-        </p>
-      </form>
+        <section class="panel" aria-labelledby="create-heading">
+          <h2 id="create-heading">2. Create the ISO</h2>
+          <form
+            id="customizer"
+            data-iso-url={isoUrl}
+            data-iso-name={isoName}
+          >
+            <label for="auth-key">Auth key</label>
+            <input
+              id="auth-key"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="tskey-auth-…"
+            />
+            <button type="submit" disabled>Create ISO</button>
+            <noscript>Enable JavaScript to customize an ISO in your browser.</noscript>
+            <progress id="progress" hidden></progress>
+            <p id="status" role="status" aria-live="polite">
+              {isoUrl
+                ? `Base image: ${release}`
+                : "No release image configured."}
+            </p>
+          </form>
+          <p class="fine">
+            The key is written into the ISO in your browser and is not
+            uploaded. The resulting image contains it in plain text; keep it
+            private.
+          </p>
+        </section>
 
-      <p class="note">
-        The key is inserted locally in your browser. The customized ISO contains
-        it in plain text, so keep the image private.
-      </p>
+        <section aria-labelledby="boot-heading">
+          <h2 id="boot-heading">3. Flash and boot</h2>
+          <p>
+            Write the ISO to a USB drive with <code>dd</code>, Etcher, or
+            similar and boot from it on a machine with a wired connection.
+            No display or keyboard is needed. The machine appears in your
+            tailnet as <code>tailboot</code>; if that name is taken, Tailscale
+            appends a number (<code>tailboot-1</code>).
+          </p>
+        </section>
+
+        <section aria-labelledby="ssh-heading">
+          <h2 id="ssh-heading">4. Connect</h2>
+          <pre><code>ssh tailboot@tailboot
+sudo -i</code></pre>
+          <p>
+            Tailscale authenticates the session; there is no password. Your
+            policy must allow port 22 to the machine and include an SSH rule
+            for the <code>tailboot</code> user. <code>autogroup:nonroot</code>
+            covers it; <code>root</code> is not included. See
+            <a href="https://tailscale.com/kb/1193/tailscale-ssh" rel="noreferrer">Tailscale SSH</a>.
+          </p>
+          <p>
+            The local console logs in as <code>tailboot</code> automatically.
+            If it prompts, the password is <code>live</code>. The account has
+            passwordless sudo.
+          </p>
+        </section>
+      </div>
     </main>
 
     <script>
@@ -100,7 +140,7 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
 
       const form = document.querySelector<HTMLFormElement>("#customizer")!;
       const keyInput = document.querySelector<HTMLInputElement>("#auth-key")!;
-      const button = document.querySelector<HTMLButtonElement>("button")!;
+      const button = form.querySelector<HTMLButtonElement>("button")!;
       const progress = document.querySelector<HTMLProgressElement>("#progress")!;
       const status = document.querySelector<HTMLParagraphElement>("#status")!;
       const pickFile = (window as Window & { showSaveFilePicker?: SaveFilePicker })
@@ -212,88 +252,144 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
 
   :global(body) {
     margin: 0;
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding: 1.5rem;
-    background: #f4f5f7;
-    color: #17191c;
-    font-family: system-ui, sans-serif;
+    font: 15px/1.5 system-ui, sans-serif;
+  }
+
+  header,
+  main {
+    width: min(100% - 2.5rem, 62rem);
+    margin-inline: auto;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: 1.25rem;
+    border-bottom: 1px solid #ddd;
+  }
+
+  header img {
+    display: block;
+    width: auto;
+    height: 1.75rem;
   }
 
   main {
-    width: min(100%, 34rem);
-    padding: 2rem;
-    background: white;
-    border: 1px solid #d9dce1;
-    border-radius: 0.75rem;
+    padding-block: 2rem 4rem;
   }
 
-  h1 {
-    margin: 0 0 0.5rem;
+  .intro {
+    max-width: 44rem;
+    margin: 0 0 2.5rem;
   }
 
-  h2 {
-    margin-top: 1.5rem;
-    font-size: 1.15rem;
+  .layout {
+    display: grid;
+    gap: 2.5rem;
   }
 
   section {
-    line-height: 1.5;
+    max-width: 40rem;
   }
 
-  ul {
-    padding-left: 1.25rem;
+  h2 {
+    margin: 0 0 0.6rem;
+    font-size: 1.05rem;
   }
 
-  a {
-    color: #2457b5;
-    text-underline-offset: 0.15em;
+  p {
+    margin: 0 0 0.85rem;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  pre {
+    margin: 0 0 0.85rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    overflow-x: auto;
+  }
+
+  table {
+    margin: 0 0 0.85rem;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    width: 8rem;
+    padding-right: 1rem;
+    font-weight: normal;
+    color: #555;
+  }
+
+  .fine,
+  #status {
+    color: #555;
+    font-size: 0.9rem;
+  }
+
+  #status {
+    margin: 0;
+  }
+
+  .panel {
+    padding: 1.25rem;
+    border: 1px solid #ddd;
+  }
+
+  .panel .fine {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ddd;
   }
 
   form {
     display: grid;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    gap: 0.6rem;
   }
 
   label {
-    font-weight: 650;
+    font-weight: 600;
   }
 
   input,
   button {
-    min-height: 2.75rem;
-    padding: 0.65rem 0.8rem;
-    border: 1px solid #aeb4bd;
-    border-radius: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
     font: inherit;
-  }
-
-  button {
-    border-color: #111827;
-    background: #111827;
-    color: white;
-    cursor: pointer;
   }
 
   button:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
   }
 
   progress {
     width: 100%;
   }
 
-  #status,
-  .note {
-    margin: 0;
-    color: #565d68;
-    font-size: 0.9rem;
-  }
+  @media (min-width: 56rem) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      column-gap: 4rem;
+      align-items: start;
+    }
 
-  .note {
-    margin-top: 1.5rem;
+    .panel {
+      grid-column: 2;
+      grid-row: 1 / span 3;
+      position: sticky;
+      top: 1.25rem;
+    }
   }
 </style>
