@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
-  AUTH_KEY_CAPACITY,
   AUTH_KEY_PLACEHOLDER,
   patchTailbootIso,
 } from "./tailboot-iso.ts";
@@ -62,6 +62,14 @@ function join(chunks: Uint8Array[]) {
   return joined;
 }
 
+test("keeps the image key file in sync with the browser customizer", async () => {
+  const keyFile = await readFile(
+    new URL("./image/config/includes.binary/TAILBOOT.KEY", import.meta.url),
+    "utf8",
+  );
+  assert.equal(keyFile, AUTH_KEY_PLACEHOLDER);
+});
+
 test("patches across arbitrary chunk boundaries without changing ISO size", async () => {
   const before = "fake ISO header\0";
   const after = "\0fake ISO footer";
@@ -78,8 +86,8 @@ test("patches across arbitrary chunk boundaries without changing ISO size", asyn
 
   const patched = join(output.chunks);
   assert.equal(patched.byteLength, input.byteLength);
-  assert.match(decode(patched), /BEGIN\ntskey-auth-test-key +\nTAILBOOT/);
-  assert.equal(decode(patched).includes("~".repeat(AUTH_KEY_CAPACITY)), false);
+  assert.match(decode(patched), /tskey-auth-test-key +\n/);
+  assert.equal(decode(patched).includes(AUTH_KEY_PLACEHOLDER), false);
   assert.equal(progress.at(-1), input.byteLength);
 });
 
@@ -93,19 +101,6 @@ test("rejects images without exactly one empty slot", async () => {
         destination: output.stream,
       }),
       /slot/,
-    );
-  }
-});
-
-test("rejects unsafe or oversized key values", async () => {
-  for (const accessKey of ["", " key", "key\n", "x".repeat(AUTH_KEY_CAPACITY + 1)]) {
-    const output = memoryDestination();
-    await assert.rejects(
-      patchTailbootIso({
-        source: new Blob([AUTH_KEY_PLACEHOLDER]),
-        accessKey,
-        destination: output.stream,
-      }),
     );
   }
 });

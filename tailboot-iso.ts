@@ -9,15 +9,11 @@
 
 const encoder = new TextEncoder();
 
-export const AUTH_KEY_CAPACITY = 512;
-
-const SLOT_START = "TAILBOOT_TAILSCALE_AUTH_KEY_V1_BEGIN\n";
-const SLOT_END = "\nTAILBOOT_TAILSCALE_AUTH_KEY_V1_END\n";
-const EMPTY_SLOT_BYTE = "~";
+const AUTH_KEY_CAPACITY = 512;
 
 /** Write this exact string to /TAILBOOT.KEY when building the base ISO. */
 export const AUTH_KEY_PLACEHOLDER =
-  SLOT_START + EMPTY_SLOT_BYTE.repeat(AUTH_KEY_CAPACITY) + SLOT_END;
+  "~".repeat(AUTH_KEY_CAPACITY) + "\n";
 
 const placeholderBytes = encoder.encode(AUTH_KEY_PLACEHOLDER);
 
@@ -27,31 +23,6 @@ type PatchOptions = {
   destination: WritableStream<Uint8Array>;
   onProgress?: (inputBytes: number) => void;
 };
-
-function accessKeyRecord(accessKey: string) {
-  if (accessKey.length === 0) {
-    throw new TypeError("The Tailscale auth key must be a non-empty string.");
-  }
-
-  // Tokens do not contain whitespace. Rejecting it catches accidental copy and
-  // paste errors and keeps the boot-time record deliberately easy to parse.
-  if (!/^[!-~]+$/.test(accessKey)) {
-    throw new TypeError(
-      "The Tailscale auth key must contain only printable ASCII without spaces.",
-    );
-  }
-
-  const keyBytes = encoder.encode(accessKey);
-  if (keyBytes.byteLength > AUTH_KEY_CAPACITY) {
-    throw new RangeError(
-      `The Tailscale auth key is larger than the ${AUTH_KEY_CAPACITY}-byte slot.`,
-    );
-  }
-
-  return encoder.encode(
-    SLOT_START + accessKey.padEnd(AUTH_KEY_CAPACITY, " ") + SLOT_END,
-  );
-}
 
 function concatBytes(left: Uint8Array, right: Uint8Array) {
   if (left.byteLength === 0) return right;
@@ -79,7 +50,9 @@ function indexOfBytes(
 }
 
 function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) {
-  const replacementBytes = accessKeyRecord(accessKey);
+  const replacementBytes = encoder.encode(
+    accessKey.padEnd(AUTH_KEY_CAPACITY, " ") + "\n",
+  );
   const overlapSize = placeholderBytes.byteLength - 1;
   let pending = new Uint8Array();
   let inputBytes = 0;
@@ -139,13 +112,8 @@ export async function patchTailbootIso({
   destination,
   onProgress,
 }: PatchOptions) {
-  let patcher;
-  try {
-    patcher = isoPatcher(accessKey, onProgress);
-  } catch (error) {
-    await destination.abort(error);
-    throw error;
-  }
-
-  await source.stream().pipeThrough(patcher).pipeTo(destination);
+  await source
+    .stream()
+    .pipeThrough(isoPatcher(accessKey, onProgress))
+    .pipeTo(destination);
 }

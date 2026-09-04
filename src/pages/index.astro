@@ -28,7 +28,6 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
 
       <form
         id="customizer"
-        data-iso-url={isoUrl}
         data-iso-name={isoName}
       >
         <p class="step">
@@ -51,7 +50,6 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
           autocomplete="off"
           spellcheck="false"
           placeholder="tskey-auth-…"
-          required
         />
         <button type="submit" disabled={!isoUrl}>4. Create ISO</button>
         <progress id="progress" hidden></progress>
@@ -79,18 +77,14 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
         createWritable: () => Promise<WritableStream<Uint8Array>>;
       }>;
 
-      const form = document.querySelector<HTMLFormElement>("#customizer");
-      const isoInput = document.querySelector<HTMLInputElement>("#base-image");
-      const keyInput = document.querySelector<HTMLInputElement>("#auth-key");
-      const button = document.querySelector<HTMLButtonElement>("button");
-      const progress = document.querySelector<HTMLProgressElement>("#progress");
-      const status = document.querySelector<HTMLParagraphElement>("#status");
+      const form = document.querySelector<HTMLFormElement>("#customizer")!;
+      const isoInput = document.querySelector<HTMLInputElement>("#base-image")!;
+      const keyInput = document.querySelector<HTMLInputElement>("#auth-key")!;
+      const button = document.querySelector<HTMLButtonElement>("button")!;
+      const progress = document.querySelector<HTMLProgressElement>("#progress")!;
+      const status = document.querySelector<HTMLParagraphElement>("#status")!;
       const pickFile = (window as Window & { showSaveFilePicker?: SaveFilePicker })
         .showSaveFilePicker;
-
-      if (!form || !isoInput || !keyInput || !button || !progress || !status) {
-        throw new Error("Tailboot form is incomplete.");
-      }
 
       if (!pickFile) {
         button.disabled = true;
@@ -100,7 +94,7 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (!pickFile || !form.dataset.isoUrl) return;
+        if (!pickFile) return;
         const source = isoInput.files?.[0];
         if (!source) return;
 

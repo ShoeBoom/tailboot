@@ -3,15 +3,13 @@ Description=Join Tailscale and enable Tailscale SSH
 Wants=network-online.target
 After=network-online.target tailscaled.service
 Requires=tailscaled.service
-ConditionPathExists=/run/live/medium/TAILBOOT.KEY
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/tailboot-up
+ExecStart=/usr/bin/tailscale up --auth-key=file:/run/live/medium/TAILBOOT.KEY --ssh --timeout=2m
 RemainAfterExit=yes
 Restart=on-failure
 RestartSec=15s
 
 [Install]
 WantedBy=multi-user.target
-
