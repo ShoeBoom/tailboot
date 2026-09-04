@@ -7,7 +7,7 @@
     { "pattern": "proxy.tailboot.download", "custom_domain": true }
   ],
   "vars": {
-    "ALLOWED_ORIGIN": "https://shoeboom.github.io"
+    "ALLOWED_ORIGIN": "https://tailboot.download"
   },
   "observability": {
     "enabled": true

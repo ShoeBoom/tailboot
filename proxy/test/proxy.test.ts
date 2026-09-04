@@ -3,7 +3,7 @@ import test from "node:test";
 
 import worker, { proxyRelease } from "../src/index.ts";
 
-const origin = "https://shoeboom.github.io";
+const origin = "https://tailboot.download";
 const tag = "v2026.09.04.153117";
 const url = `https://proxy.example/${tag}`;
 function request(path = url, init: RequestInit = {}) {
@@ -45,7 +45,7 @@ test("streams versioned Tailboot ISOs with CORS and without forwarding client he
 });
 
 test("rejects other origins, missing origins, and opaque origins before fetching", async () => {
-  for (const otherOrigin of ["https://other.example", "https://shoeboom.github.io.evil.example", "null", ""]) {
+  for (const otherOrigin of ["https://other.example", "https://tailboot.download.evil.example", "https://shoeboom.github.io", "null", ""]) {
     const response = await proxyRelease(request(url, { headers: { Origin: otherOrigin } }), origin, neverFetch);
     assert.equal(response.status, 403);
     assert.equal(response.headers.has("Access-Control-Allow-Origin"), false);

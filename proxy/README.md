@@ -21,11 +21,10 @@ the active `tailboot.download` zone. Cloudflare provisions DNS and TLS for the
 [Worker custom domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/).
 
 Set `vars.ALLOWED_ORIGIN` in [wrangler.jsonc](wrangler.jsonc) to the website's
-origin. It defaults to `https://shoeboom.github.io`. Requests with a different,
+origin. It defaults to `https://tailboot.download`. Requests with a different,
 missing, or opaque (`null`) origin are rejected before contacting GitHub.
 
 CORS limits browser access, not non-browser clients that can spoof `Origin`.
-All pages under `https://shoeboom.github.io` share the same origin.
 
 From this directory:
 
