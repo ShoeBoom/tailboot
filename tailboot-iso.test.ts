@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
-  AUTH_KEY_PLACEHOLDER,
+  CONFIG_PLACEHOLDER,
   patchTailbootIso,
 } from "./tailboot-iso.ts";
 
@@ -62,46 +62,94 @@ function join(chunks: Uint8Array[]) {
   return joined;
 }
 
-test("keeps the image key file in sync with the browser customizer", async () => {
-  const keyFile = await readFile(
-    new URL("./image/config/includes.binary/TAILBOOT.KEY", import.meta.url),
+test("keeps the image JSON file in sync with the browser customizer", async () => {
+  const configFile = await readFile(
+    new URL("./image/config/includes.binary/TAILBOOT.JSON", import.meta.url),
     "utf8",
   );
-  assert.equal(keyFile, AUTH_KEY_PLACEHOLDER);
+  assert.equal(configFile, CONFIG_PLACEHOLDER);
 });
 
 test("patches across arbitrary chunk boundaries without changing ISO size", async () => {
   const before = "fake ISO header\0";
   const after = "\0fake ISO footer";
-  const input = encode(before + AUTH_KEY_PLACEHOLDER + after);
+  const input = encode(before + CONFIG_PLACEHOLDER + after);
   const output = memoryDestination();
   const progress: number[] = [];
 
   await patchTailbootIso({
     source: new ChunkedBlob(input, [1, 7, 31, 2]),
-    accessKey: "tskey-auth-test-key",
+    config: { authKey: "tskey-auth-test-key" },
     destination: output.stream,
     onProgress: (inputBytes) => progress.push(inputBytes),
   });
 
   const patched = join(output.chunks);
   assert.equal(patched.byteLength, input.byteLength);
-  assert.match(decode(patched), /tskey-auth-test-key +\n/);
-  assert.equal(decode(patched).includes(AUTH_KEY_PLACEHOLDER), false);
+  assert.equal(decode(patched.subarray(0, encode(before).byteLength)), before);
+  assert.equal(decode(patched.subarray(-encode(after).byteLength)), after);
+  assert.deepEqual(JSON.parse(decode(patched.subarray(
+    encode(before).byteLength, patched.byteLength - encode(after).byteLength,
+  ))), { authKey: "tskey-auth-test-key" });
+  assert.equal(decode(patched).includes(CONFIG_PLACEHOLDER), false);
   assert.equal(progress.at(-1), input.byteLength);
 });
 
 test("rejects images without exactly one empty slot", async () => {
-  for (const contents of ["no slot", AUTH_KEY_PLACEHOLDER.repeat(2)]) {
+  for (const contents of ["no slot", "~".repeat(512) + "\n", CONFIG_PLACEHOLDER.repeat(2)]) {
     const output = memoryDestination();
     await assert.rejects(
       patchTailbootIso({
         source: new Blob([contents]),
-        accessKey: "tskey-auth-test-key",
+        config: { authKey: "tskey-auth-test-key" },
         destination: output.stream,
       }),
       /slot/,
     );
+  }
+});
+
+test("round-trips Unicode and escaped credentials in a fixed-size JSON record", async () => {
+  const config = {
+    authKey: "tskey-auth-test-key",
+    wifi: { ssid: 'Café "网络" \\ 📶', password: ' spaces " \\ $() `secret` ' },
+  };
+  const output = memoryDestination();
+  await patchTailbootIso({
+    source: chunkedStream(encode(CONFIG_PLACEHOLDER), [4094, 1]),
+    config,
+    destination: output.stream,
+  });
+  const patched = join(output.chunks);
+  assert.equal(patched.byteLength, encode(CONFIG_PLACEHOLDER).byteLength);
+  assert.deepEqual(JSON.parse(decode(patched)), config);
+});
+
+test("accepts an exact fit and aborts oversized UTF-8 configuration without writing", async () => {
+  const capacity = encode(CONFIG_PLACEHOLDER).byteLength - 1;
+  const overhead = encode(JSON.stringify({ authKey: "" })).byteLength;
+  const exactFit = { authKey: "x".repeat(capacity - overhead) };
+  const output = memoryDestination();
+  await patchTailbootIso({
+    source: new Blob([CONFIG_PLACEHOLDER]),
+    config: exactFit,
+    destination: output.stream,
+  });
+  assert.deepEqual(JSON.parse(decode(join(output.chunks))), exactFit);
+
+  for (const authKey of [exactFit.authKey + "x", "é".repeat(capacity / 2)]) {
+    let aborted = false;
+    let written = false;
+    await assert.rejects(patchTailbootIso({
+      source: new Blob([CONFIG_PLACEHOLDER]),
+      config: { authKey },
+      destination: new WritableStream({
+        write() { written = true; },
+        abort() { aborted = true; },
+      }),
+    }), /exceeds/);
+    assert.equal(aborted, true);
+    assert.equal(written, false);
   }
 });
 
@@ -111,11 +159,11 @@ test("aborts the destination on a mid-download network failure", async () => {
   await assert.rejects(patchTailbootIso({
     source: new ReadableStream({
       pull(controller) {
-        if (pulls++ === 0) controller.enqueue(encode(AUTH_KEY_PLACEHOLDER));
+        if (pulls++ === 0) controller.enqueue(encode(CONFIG_PLACEHOLDER));
         else controller.error(new Error("connection lost"));
       },
     }),
-    accessKey: "tskey-auth-test-key",
+    config: { authKey: "tskey-auth-test-key" },
     destination: new WritableStream({ abort() { aborted = true; } }),
   }), /connection lost/);
   assert.equal(aborted, true);

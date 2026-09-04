@@ -78,6 +78,16 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
               spellcheck="false"
               placeholder="tskey-auth-…"
             />
+            <details>
+              <summary>Wi-Fi (optional)</summary>
+              <div class="wifi-fields">
+                <label for="wifi-ssid">Network name (SSID)</label>
+                <input id="wifi-ssid" type="text" autocomplete="off" spellcheck="false" />
+                <label for="wifi-password">Wi-Fi password</label>
+                <input id="wifi-password" type="password" autocomplete="off" />
+                <p class="fine">WPA2/WPA3 Personal. Ethernet takes priority; Wi-Fi is the fallback. Leave the network name empty to use Ethernet only.</p>
+              </div>
+            </details>
             <button type="submit" disabled>Create ISO</button>
             <noscript>Enable JavaScript to customize an ISO in your browser.</noscript>
             <progress id="progress" hidden></progress>
@@ -88,9 +98,9 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
             </p>
           </form>
           <p class="fine">
-            The key is written into the ISO in your browser and is not
-            uploaded. The resulting image contains it in plain text; keep it
-            private.
+            Credentials are written into the ISO in your browser and are not
+            uploaded. The resulting image contains them in plain text; keep
+            it private.
           </p>
         </section>
 
@@ -98,10 +108,10 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
           <h2 id="boot-heading">3. Flash and boot</h2>
           <p>
             Write the ISO to a USB drive with <code>dd</code>, Etcher, or
-            similar and boot from it on a machine with a wired connection.
-            No display or keyboard is needed. The machine appears in your
-            tailnet as <code>tailboot</code>; if that name is taken, Tailscale
-            appends a number (<code>tailboot-1</code>).
+            similar and boot from it on a machine with Ethernet or the Wi-Fi
+            network you configured. No display or keyboard is needed. The
+            machine appears in your tailnet as <code>tailboot</code>; if that
+            name is taken, Tailscale appends a number (<code>tailboot-1</code>).
           </p>
         </section>
 
@@ -140,6 +150,8 @@ sudo -i</code></pre>
 
       const form = document.querySelector<HTMLFormElement>("#customizer")!;
       const keyInput = document.querySelector<HTMLInputElement>("#auth-key")!;
+      const ssidInput = document.querySelector<HTMLInputElement>("#wifi-ssid")!;
+      const passwordInput = document.querySelector<HTMLInputElement>("#wifi-password")!;
       const button = form.querySelector<HTMLButtonElement>("button")!;
       const progress = document.querySelector<HTMLProgressElement>("#progress")!;
       const status = document.querySelector<HTMLParagraphElement>("#status")!;
@@ -147,12 +159,20 @@ sudo -i</code></pre>
         .showSaveFilePicker;
 
       button.disabled = !form.dataset.isoUrl;
+      ssidInput.addEventListener("input", () => {
+        passwordInput.required = ssidInput.value.length > 0;
+      });
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const isoUrl = form.dataset.isoUrl;
         if (!isoUrl || button.disabled) return;
-        const accessKey = keyInput.value;
+        const config = {
+          authKey: keyInput.value,
+          ...(ssidInput.value ? {
+            wifi: { ssid: ssidInput.value, password: passwordInput.value },
+          } : {}),
+        };
 
         button.disabled = true;
         progress.hidden = false;
@@ -204,7 +224,7 @@ sudo -i</code></pre>
               });
           await patchTailbootIso({
             source: source.body,
-            accessKey,
+            config,
             destination,
             onProgress: (inputBytes) => {
               if (downloadSize > 0) progress.value = inputBytes;
@@ -226,6 +246,7 @@ sudo -i</code></pre>
           }
 
           keyInput.value = "";
+          passwordInput.value = "";
           progress.max = 1;
           progress.value = 1;
           status.textContent = "ISO ready. Flash it to a USB drive.";
@@ -357,6 +378,22 @@ sudo -i</code></pre>
   form {
     display: grid;
     gap: 0.6rem;
+  }
+
+  summary {
+    cursor: pointer;
+  }
+
+  .wifi-fields {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+  }
+
+  .wifi-fields .fine {
+    margin: 0;
+    padding: 0;
+    border: 0;
   }
 
   label {

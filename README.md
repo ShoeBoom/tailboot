@@ -19,9 +19,38 @@ The account has passwordless sudo.
 ## How customization works
 
 The base ISO contains a fixed-size placeholder in the uncompressed
-`/TAILBOOT.KEY` file. The browser-side TypeScript module replaces that record
-without changing the length of the image. At boot, the system passes that file
-directly to `tailscale up --ssh`.
+`/TAILBOOT.JSON` file. The browser-side TypeScript module replaces that 4096-byte
+record with UTF-8 JSON padded with spaces and a final newline, without changing
+the length of the image. Configurations larger than the slot are rejected.
+
+```json
+{
+  "authKey": "tskey-auth-…",
+  "wifi": {
+    "ssid": "My Wi-Fi",
+    "password": "my-wifi-password"
+  }
+}
+```
+
+Omit `wifi` to use Ethernet only. The customizer supports one WPA2/WPA3 Personal
+network. At boot, `tailboot-configure.service` extracts the auth key into a
+root-only file under `/run/tailboot` for `tailscale up --ssh`. If Wi-Fi is
+configured, it uses `nmcli --offline` to create a root-only connection profile
+under `/run/NetworkManager/system-connections` before NetworkManager starts.
+NetworkManager handles connecting and reconnecting. Ethernet is preferred;
+the configured Wi-Fi network is the fallback when Ethernet is disconnected or
+has no default route. Both connections can stay active. We leave route metrics
+at NetworkManager's defaults, which favor Ethernet, without custom switching
+logic. This does not detect an upstream internet outage on an otherwise
+connected Ethernet network.
+
+Wi-Fi profile generation is best-effort,
+with a 10-second timeout (and forced termination one second later if needed);
+failures are logged without blocking auth-key setup or Ethernet startup.
+Tailscale does not wait for Wi-Fi scanning or authentication to finish: its join
+service retries until internet connectivity is available. These files live in
+RAM; Tailscale state is never restored between boots.
 
 The site downloads its pinned ISO through the standalone [Cloudflare proxy](proxy/)
 and customizes it locally. The proxy allows browser requests from the configured
@@ -30,7 +59,9 @@ when a new ISO is published.
 
 Browsers with a file-system writer stream directly to disk. Other browsers hold
 the customized ISO in memory before downloading it. The customizer requires
-exactly one key slot before completing the file. The key never reaches the proxy.
+exactly one JSON slot before completing the file. Credentials never reach the
+proxy. The JSON customizer requires a newly built base ISO; older images with
+`/TAILBOOT.KEY` are incompatible.
 
 ## Website
 
@@ -66,13 +97,18 @@ sudo ./scripts/build-iso.sh tailboot-local-amd64.iso
 
 The result is written to `dist/`. Builds use Tailscale's official Debian
 repository and Debian's `minbase` bootstrap. The image adds only certificates,
-common network firmware, NetworkManager, sudo, Tailscale, and `user-setup`
+common network firmware, NetworkManager, wpasupplicant, jq, sudo, Tailscale, and `user-setup`
 for the live login account; install other tools with APT after the machine
 connects. Because APT recommends are disabled, `user-setup` must be listed
-explicitly. Release verification checks that the login dependencies are installed.
+explicitly, as must `wpasupplicant` for Wi-Fi. Release verification checks these
+dependencies and the installed configuration script and enabled services.
+It also runs the configuration script in the build chroot with and without
+Wi-Fi, checking credential escaping and file permissions using Debian's nmcli.
+Invalid Wi-Fi settings, a failed profile writer, and a stuck profile writer
+must all leave auth-key setup successful without installing a partial profile.
 
 The ISO's internal media-check manifest is disabled because customizing
-`/TAILBOOT.KEY` necessarily changes that file. Every GitHub release includes a
+`/TAILBOOT.JSON` necessarily changes that file. Every GitHub release includes a
 separate SHA-256 file for verifying the unmodified base ISO.
 
 ## Releases and GitHub Pages
@@ -127,8 +163,8 @@ No proxy URL repository variable or Cloudflare deploy hook is needed.
 
 Use a reusable, ephemeral Tailscale auth key with a 90-day expiry. When it
 expires, generate another key and customize a new ISO. Every boot creates a new
-ephemeral Tailscale machine identity. The customized image contains the key in
-plain text, so keep it private.
+ephemeral Tailscale machine identity. The customized image contains the auth key
+and any Wi-Fi credentials in plain text, so keep it private.
 
 Run the website checks with the release variables above set:
 

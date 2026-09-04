@@ -78,6 +78,9 @@ jobs:
       - name: Verify image contents and boot records
         run: ./scripts/verify-iso.sh "dist/${{ steps.metadata.outputs.iso_name }}"
 
+      - name: Verify configuration with Debian's NetworkManager
+        run: sudo chroot image/chroot /bin/sh < scripts/test-configure.sh
+
       - name: Create checksum
         working-directory: dist
         run: sha256sum "${{ steps.metadata.outputs.iso_name }}" > "${{ steps.metadata.outputs.iso_name }}.sha256"

@@ -3,5 +3,6 @@
 set -eu
 
 systemctl enable NetworkManager.service
+systemctl enable tailboot-configure.service
 systemctl enable tailscaled.service
 systemctl enable tailboot.service

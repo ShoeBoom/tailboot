@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eu
+umask 077
+
+config=/run/live/medium/TAILBOOT.JSON
+
+jq -r '.authKey' "${config}" > /run/tailboot/auth.key
+
+# Wi-Fi is optional: an error or hang must not prevent Ethernet and Tailscale
+# from starting. Keep auth-key extraction above outside this failure boundary.
+if ! timeout --kill-after=1s 10s /usr/local/sbin/tailboot-wifi; then
+  echo 'Tailboot Wi-Fi setup failed; continuing with Ethernet available.' >&2
+fi

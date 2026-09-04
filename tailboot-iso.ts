@@ -1,25 +1,33 @@
 /**
  * Browser-side Tailboot ISO customizer.
  *
- * The base ISO must contain AUTH_KEY_PLACEHOLDER exactly once in an
- * uncompressed file. The recommended location is /TAILBOOT.KEY in the ISO9660
- * root. Keep it outside the live system's SquashFS: changing compressed data
+ * The base ISO must contain CONFIG_PLACEHOLDER exactly once in an
+ * uncompressed file at /TAILBOOT.JSON in the ISO9660 root.
+ * Keep it outside the live system's SquashFS: changing compressed data
  * in place would corrupt the filesystem.
  */
 
 const encoder = new TextEncoder();
 
-const AUTH_KEY_CAPACITY = 512;
+const CONFIG_CAPACITY = 4095;
 
-/** Write this exact string to /TAILBOOT.KEY when building the base ISO. */
-export const AUTH_KEY_PLACEHOLDER =
-  "~".repeat(AUTH_KEY_CAPACITY) + "\n";
+/** Write this exact 4096-byte record to /TAILBOOT.JSON in the base ISO. */
+export const CONFIG_PLACEHOLDER =
+  "TAILBOOT_CONFIG_V1".padEnd(CONFIG_CAPACITY, "~") + "\n";
 
-const placeholderBytes = encoder.encode(AUTH_KEY_PLACEHOLDER);
+const placeholderBytes = encoder.encode(CONFIG_PLACEHOLDER);
+
+export type TailbootConfig = {
+  authKey: string;
+  wifi?: {
+    ssid: string;
+    password: string;
+  };
+};
 
 type PatchOptions = {
   source: Blob | ReadableStream<Uint8Array>;
-  accessKey: string;
+  config: TailbootConfig;
   destination: WritableStream<Uint8Array>;
   onProgress?: (inputBytes: number) => void;
 };
@@ -49,16 +57,26 @@ function indexOfBytes(
   return -1;
 }
 
-function isoPatcher({ accessKey, onProgress }: PatchOptions) {
-  const replacementBytes = encoder.encode(
-    accessKey.padEnd(AUTH_KEY_CAPACITY, " ") + "\n",
-  );
+function isoPatcher({ config, onProgress }: PatchOptions) {
+  const configBytes = encoder.encode(JSON.stringify(config));
+  const replacementBytes = new Uint8Array(placeholderBytes.byteLength).fill(32);
   const overlapSize = placeholderBytes.byteLength - 1;
   let pending = new Uint8Array();
   let inputBytes = 0;
   let matches = 0;
 
   return new TransformStream<Uint8Array, Uint8Array>({
+    start(controller) {
+      if (configBytes.byteLength > CONFIG_CAPACITY) {
+        controller.error(new Error(
+          `Configuration exceeds the ${CONFIG_CAPACITY}-byte ISO slot.`,
+        ));
+        return;
+      }
+      replacementBytes.set(configBytes);
+      replacementBytes[CONFIG_CAPACITY] = 10;
+    },
+
     transform(bytes, controller) {
       inputBytes += bytes.byteLength;
       let buffer = concatBytes(pending, bytes);
@@ -86,12 +104,12 @@ function isoPatcher({ accessKey, onProgress }: PatchOptions) {
     flush(controller) {
       if (matches === 0) {
         throw new Error(
-          "This is not a customizable Tailboot ISO: the auth-key slot was not found.",
+          "This is not a compatible Tailboot ISO: the JSON configuration slot was not found.",
         );
       }
       if (matches !== 1) {
         throw new Error(
-          `The ISO contains ${matches} auth-key slots; expected exactly one.`,
+          `The ISO contains ${matches} configuration slots; expected exactly one.`,
         );
       }
       if (pending.byteLength > 0) controller.enqueue(pending);
