@@ -20,64 +20,57 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
     <title>Tailboot</title>
   </head>
   <body>
-    <header class="top">
+    <header>
       <img src={logoUrl} alt="Tailboot" width="1238" height="409" />
-      <a href="https://github.com/ShoeBoom/tailboot" target="_blank" rel="noreferrer">
-        Source
-      </a>
+      <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">GitHub</a>
     </header>
 
     <main>
-      <div class="intro">
-        <h1>A USB stick that joins your tailnet.</h1>
-        <p>
-          Tailboot is a headless Debian live image. Boot it on any machine and
-          it appears on your Tailscale network, ready for Tailscale SSH. Nothing
-          is written to the machine’s disks.
-        </p>
-      </div>
+      <p class="intro">
+        Tailboot is a Debian live image that boots headless, joins your
+        tailnet with an embedded auth key, and enables Tailscale SSH. It
+        installs nothing else; add what you need over SSH.
+      </p>
 
       <div class="layout">
-        <section class="step" aria-labelledby="key-heading">
-          <span class="marker" aria-hidden="true">1</span>
-          <h2 id="key-heading">Create a Tailscale auth key</h2>
+        <section aria-labelledby="key-heading">
+          <h2 id="key-heading">1. Create an auth key</h2>
           <p>
-            Open <a href="https://console.tailscale.com/admin/settings/keys" target="_blank" rel="noreferrer">Tailscale’s Keys settings</a>
-            and select <strong>Generate auth key</strong> with these settings:
+            In <a href="https://console.tailscale.com/admin/settings/keys" rel="noreferrer">Settings → Keys</a>,
+            choose <strong>Generate auth key</strong>:
           </p>
-          <dl>
-            <div><dt>Description</dt><dd><code>tailboot</code> (optional)</dd></div>
-            <div><dt>Reusable</dt><dd>On</dd></div>
-            <div><dt>Expiration</dt><dd>90 days</dd></div>
-            <div><dt>Ephemeral</dt><dd>On</dd></div>
-            <div><dt>Pre-approved</dt><dd>On, if shown</dd></div>
-            <div><dt>Tags</dt><dd>An isolated tag (recommended)</dd></div>
-          </dl>
+          <table>
+            <tbody>
+              <tr><th scope="row">Description</th><td><code>tailboot</code> (optional)</td></tr>
+              <tr><th scope="row">Reusable</th><td>On</td></tr>
+              <tr><th scope="row">Expiration</th><td>90 days</td></tr>
+              <tr><th scope="row">Ephemeral</th><td>On</td></tr>
+              <tr><th scope="row">Pre-approved</th><td>On, if shown</td></tr>
+              <tr><th scope="row">Tags</th><td>An isolated tag such as <code>tag:isolated</code></td></tr>
+            </tbody>
+          </table>
           <p>
-            We recommend creating a tag such as <code>tag:isolated</code> in
-            <a href="https://console.tailscale.com/admin/acls" target="_blank" rel="noreferrer">Access Controls</a>.
-            Configure your policy so machines with this tag cannot initiate
-            connections to other devices on your tailnet, while allowing you to
-            connect to them with Tailscale SSH. The tag’s name alone does not
-            restrict access: any broad allow rules must also exclude these
-            machines. See
-            <a href="https://tailscale.com/kb/1245/set-up-servers" target="_blank" rel="noreferrer">Tailscale’s server setup guide</a>.
+            Tagging is recommended. Define the tag in
+            <a href="https://console.tailscale.com/admin/acls" rel="noreferrer">Access Controls</a>
+            and write your policy so tagged machines cannot reach other
+            devices while you can still reach them over Tailscale SSH. The
+            tag alone restricts nothing; broad allow rules must exclude it.
+            See <a href="https://tailscale.com/kb/1245/set-up-servers" rel="noreferrer">Set up servers</a>.
           </p>
           <p>
-            Every boot joins as a new ephemeral device. When the key expires,
-            generate a new key and create a new ISO.
+            Each boot registers a new ephemeral device. When the key
+            expires, generate another and build a new ISO.
           </p>
         </section>
 
-        <section class="step panel" aria-labelledby="create-heading">
-          <span class="marker" aria-hidden="true">2</span>
-          <h2 id="create-heading">Create the ISO</h2>
+        <section class="panel" aria-labelledby="create-heading">
+          <h2 id="create-heading">2. Create the ISO</h2>
           <form
             id="customizer"
             data-iso-url={isoUrl}
             data-iso-name={isoName}
           >
-            <label for="auth-key">Tailscale auth key</label>
+            <label for="auth-key">Auth key</label>
             <input
               id="auth-key"
               type="password"
@@ -95,47 +88,38 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
             </p>
           </form>
           <p class="fine">
-            The key is inserted locally in your browser and never uploaded. The
-            customized ISO contains it in plain text, so keep the image private.
+            The key is written into the ISO in your browser and is not
+            uploaded. The resulting image contains it in plain text; keep it
+            private.
           </p>
         </section>
 
-        <section class="step" aria-labelledby="boot-heading">
-          <span class="marker" aria-hidden="true">3</span>
-          <h2 id="boot-heading">Flash and boot</h2>
+        <section aria-labelledby="boot-heading">
+          <h2 id="boot-heading">3. Flash and boot</h2>
           <p>
-            Write the ISO to a USB drive with your usual imaging tool, then boot
-            the target machine from it with a wired network connection. It joins
-            your tailnet as <code>tailboot</code> shortly after booting.
+            Write the ISO to a USB drive with <code>dd</code>, Etcher, or
+            similar and boot from it on a machine with a wired connection.
+            No display or keyboard is needed. The machine appears in your
+            tailnet as <code>tailboot</code>; if that name is taken, Tailscale
+            appends a number (<code>tailboot-1</code>).
           </p>
         </section>
 
-        <section class="step" aria-labelledby="ssh-heading">
-          <span class="marker" aria-hidden="true">4</span>
-          <h2 id="ssh-heading">Connect over SSH</h2>
+        <section aria-labelledby="ssh-heading">
+          <h2 id="ssh-heading">4. Connect</h2>
+          <pre><code>ssh tailboot@tailboot
+sudo -i</code></pre>
           <p>
-            From any device on your tailnet, connect as the <code>tailboot</code>
-            user. Tailscale authenticates the connection; there is no password.
-          </p>
-          <pre><code>ssh tailboot@tailboot</code></pre>
-          <p>
-            If the name is already taken, Tailscale assigns one such as
-            <code>tailboot-1</code>. Use the name or IP shown in the
-            <a href="https://console.tailscale.com/admin/machines" target="_blank" rel="noreferrer">Machines</a>
-            list. Run <code>sudo -i</code> after connecting for a root shell.
+            Tailscale authenticates the session; there is no password. Your
+            policy must allow port 22 to the machine and include an SSH rule
+            for the <code>tailboot</code> user. <code>autogroup:nonroot</code>
+            covers it; <code>root</code> is not included. See
+            <a href="https://tailscale.com/kb/1193/tailscale-ssh" rel="noreferrer">Tailscale SSH</a>.
           </p>
           <p>
-            Your tailnet policy must allow both traffic to port 22 and
-            Tailscale SSH to the <code>tailboot</code> user.
-            <code>autogroup:nonroot</code> includes this account but excludes
-            <code>root</code>. See
-            <a href="https://tailscale.com/kb/1193/tailscale-ssh" target="_blank" rel="noreferrer">Tailscale SSH</a>
-            for policy examples.
-          </p>
-          <p class="fine">
-            The local console logs in automatically as <code>tailboot</code>.
-            If prompted, the password is Debian Live’s default,
-            <code>live</code>. The account has passwordless sudo.
+            The local console logs in as <code>tailboot</code> automatically.
+            If it prompts, the password is <code>live</code>. The account has
+            passwordless sudo.
           </p>
         </section>
       </div>
@@ -266,300 +250,146 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
     box-sizing: border-box;
   }
 
-  :global(:root) {
-    --ink: #0d0e11;
-    --muted: #625b55;
-    --accent: #fd502d;
-    --paper: #fbf6f0;
-    --line: #e5dcd1;
-    --content: 66rem;
-    --gutter: clamp(1.25rem, 4vw, 3rem);
-  }
-
   :global(body) {
     margin: 0;
-    background: var(--paper);
-    color: var(--ink);
-    font-family: system-ui, sans-serif;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
+    font: 15px/1.5 system-ui, sans-serif;
   }
 
-  .top,
+  header,
   main {
-    width: min(100% - 2 * var(--gutter), var(--content));
+    width: min(100% - 2.5rem, 62rem);
     margin-inline: auto;
   }
 
-  .top {
+  header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-block: 1.5rem;
-    border-bottom: 1px solid var(--line);
+    padding-block: 1.25rem;
+    border-bottom: 1px solid #ddd;
   }
 
-  .top img {
+  header img {
     display: block;
     width: auto;
-    height: 2.25rem;
-  }
-
-  .top a {
-    color: var(--muted);
-    font-size: 0.9rem;
-    text-decoration: none;
-  }
-
-  .top a:hover {
-    color: var(--ink);
-    text-decoration: underline;
+    height: 1.75rem;
   }
 
   main {
-    padding-block: clamp(2.5rem, 6vw, 4.5rem) 5rem;
+    padding-block: 2rem 4rem;
   }
 
   .intro {
-    max-width: 38rem;
-    margin-bottom: clamp(2.5rem, 5vw, 4rem);
-  }
-
-  h1 {
-    margin: 0 0 0.75rem;
-    font-size: clamp(2rem, 4.5vw, 2.9rem);
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    text-wrap: balance;
-  }
-
-  .intro p {
-    margin: 0;
-    font-size: 1.1rem;
-    color: var(--muted);
+    max-width: 44rem;
+    margin: 0 0 2.5rem;
   }
 
   .layout {
     display: grid;
-    gap: 3rem;
+    gap: 2.5rem;
   }
 
-  .step {
-    position: relative;
-    max-width: 38rem;
-    padding-left: 3.25rem;
-  }
-
-  .marker {
-    position: absolute;
-    top: 0;
-    left: 0;
-    display: grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    background: var(--ink);
-    color: white;
-    font-size: 0.9rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+  section {
+    max-width: 40rem;
   }
 
   h2 {
-    margin: 0 0 0.75rem;
-    font-size: 1.3rem;
-    line-height: 2rem;
-    letter-spacing: -0.01em;
+    margin: 0 0 0.6rem;
+    font-size: 1.05rem;
   }
 
   p {
-    margin: 0 0 1rem;
+    margin: 0 0 0.85rem;
   }
 
   p:last-child {
     margin-bottom: 0;
   }
 
-  a {
-    color: var(--ink);
-    text-decoration-color: var(--accent);
-    text-decoration-thickness: 1.5px;
-    text-underline-offset: 0.15em;
-  }
-
-  a:hover {
-    color: var(--accent);
-  }
-
-  code {
-    padding: 0.1em 0.35em;
-    border-radius: 0.3rem;
-    background: #efe6dc;
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 0.9em;
-  }
-
   pre {
-    margin: 0 0 1rem;
-    padding: 0.9rem 1.1rem;
-    border-radius: 0.6rem;
-    background: var(--ink);
-    color: var(--paper);
+    margin: 0 0 0.85rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
     overflow-x: auto;
   }
 
-  pre code {
-    padding: 0;
-    background: none;
-    font-size: 0.95rem;
+  table {
+    margin: 0 0 0.85rem;
+    border-collapse: collapse;
   }
 
-  dl {
-    display: grid;
-    gap: 0.35rem 1.5rem;
-    margin: 0 0 1rem;
-    padding: 0.9rem 1.1rem;
-    border: 1px solid var(--line);
-    border-radius: 0.6rem;
-    background: white;
+  th,
+  td {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
   }
 
-  dl div {
-    display: grid;
-    grid-template-columns: 8rem 1fr;
-    gap: 1rem;
+  th {
+    width: 8rem;
+    padding-right: 1rem;
+    font-weight: normal;
+    color: #555;
   }
 
-  dt {
-    color: var(--muted);
-  }
-
-  dd {
-    margin: 0;
-    font-weight: 550;
-  }
-
-  .fine {
-    color: var(--muted);
+  .fine,
+  #status {
+    color: #555;
     font-size: 0.9rem;
-  }
-
-  /* Create ISO panel */
-
-  .panel {
-    padding: 1.5rem;
-    padding-left: 4.75rem;
-    border: 1px solid var(--line);
-    border-radius: 1rem;
-    background: white;
-    box-shadow: 0 1px 2px rgb(13 14 17 / 0.04), 0 12px 32px -16px rgb(13 14 17 / 0.18);
-  }
-
-  .panel .marker {
-    top: 1.5rem;
-    left: 1.5rem;
-    background: var(--accent);
-  }
-
-  form {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  label {
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-
-  input,
-  button {
-    min-height: 2.9rem;
-    padding: 0.65rem 0.9rem;
-    border: 1px solid #cfc6bb;
-    border-radius: 0.6rem;
-    font: inherit;
-    color: inherit;
-    background: var(--paper);
-  }
-
-  input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-    border-color: var(--accent);
-  }
-
-  button {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: white;
-    font-weight: 650;
-    cursor: pointer;
-  }
-
-  button:hover:not(:disabled) {
-    filter: brightness(0.94);
-  }
-
-  button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  progress {
-    width: 100%;
-    accent-color: var(--accent);
   }
 
   #status {
     margin: 0;
-    color: var(--muted);
-    font-size: 0.9rem;
-    font-variant-numeric: tabular-nums;
+  }
+
+  .panel {
+    padding: 1.25rem;
+    border: 1px solid #ddd;
   }
 
   .panel .fine {
-    margin-top: 1.25rem;
+    margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid #ddd;
   }
 
-  @media (min-width: 60rem) {
-    .layout {
-      grid-template-columns: minmax(0, 1fr) 24rem;
-      column-gap: clamp(3rem, 6vw, 5rem);
-      align-items: start;
-    }
+  form {
+    display: grid;
+    gap: 0.6rem;
+  }
 
-    .step:not(.panel) {
-      grid-column: 1;
+  label {
+    font-weight: 600;
+  }
+
+  input,
+  button {
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  progress {
+    width: 100%;
+  }
+
+  @media (min-width: 56rem) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      column-gap: 4rem;
+      align-items: start;
     }
 
     .panel {
       grid-column: 2;
       grid-row: 1 / span 3;
       position: sticky;
-      top: 1.5rem;
-      max-width: none;
-    }
-  }
-
-  @media (max-width: 40rem) {
-    .step {
-      padding-left: 0;
-    }
-
-    .marker {
-      position: static;
-      margin-bottom: 0.75rem;
-    }
-
-    .panel {
-      padding: 1.25rem;
-    }
-
-    dl div {
-      grid-template-columns: 7.5rem 1fr;
+      top: 1.25rem;
     }
   }
 </style>
