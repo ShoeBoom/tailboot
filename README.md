@@ -38,8 +38,13 @@ network. At boot, `tailboot-configure.service` extracts the auth key into a
 root-only file under `/run/tailboot` for `tailscale up --ssh`. If Wi-Fi is
 configured, it uses `nmcli --offline` to create a root-only connection profile
 under `/run/NetworkManager/system-connections` before NetworkManager starts.
-NetworkManager handles connecting and reconnecting. These files live in RAM;
-Tailscale state is never restored between boots.
+NetworkManager handles connecting and reconnecting. Ethernet remains enabled
+whether or not Wi-Fi is configured. Wi-Fi profile generation is best-effort,
+with a 10-second timeout (and forced termination one second later if needed);
+failures are logged without blocking auth-key setup or Ethernet startup.
+Tailscale does not wait for Wi-Fi scanning or authentication to finish: its join
+service retries until internet connectivity is available. These files live in
+RAM; Tailscale state is never restored between boots.
 
 The site downloads its pinned ISO through the standalone [Cloudflare proxy](proxy/)
 and customizes it locally. The proxy allows browser requests from the configured
@@ -93,6 +98,8 @@ explicitly, as must `wpasupplicant` for Wi-Fi. Release verification checks these
 dependencies and the installed configuration script and enabled services.
 It also runs the configuration script in the build chroot with and without
 Wi-Fi, checking credential escaping and file permissions using Debian's nmcli.
+Invalid Wi-Fi settings, a failed profile writer, and a stuck profile writer
+must all leave auth-key setup successful without installing a partial profile.
 
 The ISO's internal media-check manifest is disabled because customizing
 `/TAILBOOT.JSON` necessarily changes that file. Every GitHub release includes a

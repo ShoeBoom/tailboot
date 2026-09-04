@@ -47,11 +47,13 @@ for service in tailboot tailboot-configure; do
   grep -Fq "etc/systemd/system/multi-user.target.wants/${service}.service" \
     "${work_dir}/squashfs-files"
 done
-unsquashfs -cat "${work_dir}/filesystem.squashfs" \
-  usr/local/sbin/tailboot-configure > "${work_dir}/tailboot-configure"
-cmp "${repository_dir}/image/config/includes.chroot/usr/local/sbin/tailboot-configure" \
-  "${work_dir}/tailboot-configure"
-grep -Eq '^-rwx[^ ]* .*usr/local/sbin/tailboot-configure$' "${work_dir}/squashfs-files"
+for script in tailboot-configure tailboot-wifi; do
+  unsquashfs -cat "${work_dir}/filesystem.squashfs" \
+    "usr/local/sbin/${script}" > "${work_dir}/${script}"
+  cmp "${repository_dir}/image/config/includes.chroot/usr/local/sbin/${script}" \
+    "${work_dir}/${script}"
+  grep -Eq "^-rwx[^ ]* .*usr/local/sbin/${script}$" "${work_dir}/squashfs-files"
+done
 
 xorriso -indev "${iso}" -report_el_torito plain \
   > "${work_dir}/boot-report" 2>&1

@@ -7,13 +7,8 @@ config=/run/live/medium/TAILBOOT.JSON
 
 jq -r '.authKey' "${config}" > /run/tailboot/auth.key
 
-# Let nmcli handle keyfile escaping. NetworkManager reads this RAM-only
-# profile on startup and handles device discovery and reconnection itself.
-if jq -e '.wifi != null' "${config}" > /dev/null; then
-  ssid=$(jq -r '.wifi.ssid' "${config}")
-  password=$(jq -r '.wifi.password' "${config}")
-  mkdir -p /run/NetworkManager/system-connections
-  nmcli --offline connection add type wifi ifname '*' con-name tailboot-wifi \
-    ssid "${ssid}" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "${password}" \
-    > /run/NetworkManager/system-connections/tailboot-wifi.nmconnection
+# Wi-Fi is optional: an error or hang must not prevent Ethernet and Tailscale
+# from starting. Keep auth-key extraction above outside this failure boundary.
+if ! timeout --kill-after=1s 10s /usr/local/sbin/tailboot-wifi; then
+  echo 'Tailboot Wi-Fi setup failed; continuing with Ethernet available.' >&2
 fi

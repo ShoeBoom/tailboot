@@ -1,7 +1,7 @@
 [Unit]
 Description=Join Tailscale and enable Tailscale SSH
-Wants=network-online.target
-After=network-online.target tailscaled.service tailboot-configure.service
+# Restart on failure handles late connectivity; do not wait for Wi-Fi scans.
+After=tailscaled.service tailboot-configure.service
 Requires=tailscaled.service tailboot-configure.service
 
 [Service]
