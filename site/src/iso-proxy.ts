@@ -1,5 +1,3 @@
-import { release } from "./release.ts";
-
 const copiedHeaders = [
   "accept-ranges",
   "content-length",
@@ -23,11 +21,11 @@ function response(message: string, status: number) {
 /** Streams the one ISO selected at build time; callers cannot choose an upstream. */
 export async function proxyTailbootIso(
   request: Request,
-  fetchUpstream: typeof fetch = fetch,
   selectedRelease: {
     isoName: string;
     upstreamUrl: string;
-  } = release,
+  },
+  fetchUpstream: typeof fetch = fetch,
 ) {
   const url = new URL(request.url);
   if (url.pathname !== "/tailboot.iso" || url.search) {

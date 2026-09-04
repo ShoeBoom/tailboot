@@ -34,10 +34,11 @@ pnpm install
 pnpm dev
 ```
 
-Local builds deliberately have no release ISO configured. A Cloudflare Workers
-Build has Astro read the newest release tag pointing directly at its checked-out
-commit and bake the immutable asset URL into the page and Worker. If the commit
-has no release tag, the build fails and the current deployment remains active.
+The development server deliberately has no release ISO configured. Every
+production build has Astro read the newest release tag pointing directly at its
+checked-out commit and bake the immutable asset URL into the page and Worker.
+If the commit has no release tag, the build fails and the current deployment
+remains active.
 
 ## Building the image
 
@@ -94,9 +95,14 @@ expires, generate another key and customize a new ISO. Every boot creates a new
 ephemeral Tailscale machine identity. The customized image contains the key in
 plain text, so keep it private.
 
-Run all checks with:
+Run the unit tests with:
 
 ```sh
 pnpm test
+```
+
+On a tagged release commit, run the complete production check with:
+
+```sh
 pnpm build
 ```

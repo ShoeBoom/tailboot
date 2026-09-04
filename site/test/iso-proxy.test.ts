@@ -13,13 +13,13 @@ test("does not expose an upstream in development builds", async () => {
   let fetched = false;
   const result = await proxyTailbootIso(
     new Request("https://tailboot.example/tailboot.iso"),
-    async () => {
-      fetched = true;
-      return new Response();
-    },
     {
       isoName: "tailboot.iso",
       upstreamUrl: "",
+    },
+    async () => {
+      fetched = true;
+      return new Response();
     },
   );
 
@@ -37,6 +37,7 @@ test("streams only the build-selected ISO and forwards range requests", async ()
         Authorization: "must-not-be-forwarded",
       },
     }),
+    selectedRelease,
     async (input, init) => {
       upstreamRequest = new Request(input, init);
       return new Response("0123456789", {
@@ -49,7 +50,6 @@ test("streams only the build-selected ISO and forwards range requests", async ()
         },
       });
     },
-    selectedRelease,
   );
 
   assert.equal(upstreamRequest?.url, selectedRelease.upstreamUrl);
@@ -79,7 +79,7 @@ test("rejects alternate paths, query strings, methods, and cross-site use", asyn
   ];
 
   for (const request of requests) {
-    const result = await proxyTailbootIso(request, neverFetch);
+    const result = await proxyTailbootIso(request, selectedRelease, neverFetch);
     assert.notEqual(result.status, 200);
   }
 });
