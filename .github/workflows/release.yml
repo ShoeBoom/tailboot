@@ -1,0 +1,149 @@
+name: Build Tailboot release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing Git tag to release
+        required: true
+        type: string
+
+concurrency:
+  group: tailboot-release-pages
+  cancel-in-progress: false
+
+jobs:
+  release-iso:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      iso_name: ${{ steps.metadata.outputs.iso_name }}
+      iso_url: ${{ steps.metadata.outputs.iso_url }}
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+    steps:
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            apt-utils bzip2 ca-certificates cpio curl debian-archive-keyring \
+            debootstrap file gh \
+            grub-efi-amd64-bin grub-pc-bin isolinux mtools \
+            rsync squashfs-tools syslinux-common wget xorriso xz-utils zstd
+
+          curl --fail --silent --show-error --location \
+            "https://deb.debian.org/debian/pool/main/l/live-build/live-build_20250505+deb13u1_all.deb" \
+            --output "${RUNNER_TEMP}/live-build.deb"
+          sudo apt-get install --yes --no-install-recommends \
+            "${RUNNER_TEMP}/live-build.deb"
+
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Define release artifact
+        id: metadata
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          case "${RELEASE_TAG}" in
+            ""|*[!A-Za-z0-9._-]*)
+              echo "Release tags may only contain letters, numbers, dots, underscores, and hyphens." >&2
+              exit 1
+              ;;
+          esac
+
+          iso_name="tailboot-${RELEASE_TAG}-amd64.iso"
+          iso_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${iso_name}"
+          echo "iso_name=${iso_name}" >> "${GITHUB_OUTPUT}"
+          echo "iso_url=${iso_url}" >> "${GITHUB_OUTPUT}"
+          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build ISO
+        run: |
+          mkdir -p dist
+          sudo ./scripts/build-iso.sh "${{ steps.metadata.outputs.iso_name }}"
+
+      - name: Verify image contents and boot records
+        run: ./scripts/verify-iso.sh "dist/${{ steps.metadata.outputs.iso_name }}"
+
+      - name: Create checksum
+        working-directory: dist
+        run: sha256sum "${{ steps.metadata.outputs.iso_name }}" > "${{ steps.metadata.outputs.iso_name }}.sha256"
+
+      - name: Publish immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+          ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
+        run: |
+          if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release create "${RELEASE_TAG}" \
+              "dist/${ISO_NAME}" \
+              "dist/${ISO_NAME}.sha256" \
+              --generate-notes \
+              --title "Tailboot ${RELEASE_TAG}" \
+              --verify-tag
+            exit 0
+          fi
+
+          assets=$(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
+          if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}"; then
+            if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
+              exit 0
+            fi
+
+            mkdir -p "${RUNNER_TEMP}/released-iso"
+            gh release download "${RELEASE_TAG}" \
+              --pattern "${ISO_NAME}" \
+              --dir "${RUNNER_TEMP}/released-iso"
+            (cd "${RUNNER_TEMP}/released-iso" && sha256sum "${ISO_NAME}") \
+              > "dist/${ISO_NAME}.sha256"
+            gh release upload "${RELEASE_TAG}" "dist/${ISO_NAME}.sha256"
+            exit 0
+          fi
+
+          if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
+            echo "The release has a checksum but no matching ISO; refusing an inconsistent update." >&2
+            exit 1
+          fi
+
+          gh release upload "${RELEASE_TAG}" \
+            "dist/${ISO_NAME}" \
+            "dist/${ISO_NAME}.sha256"
+
+  build-site:
+    needs: release-iso
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Build Astro site with the released ISO URL
+        uses: withastro/action@v6
+        env:
+          PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
+          PUBLIC_TAILBOOT_ISO_URL: ${{ needs.release-iso.outputs.iso_url }}
+          PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
+
+  deploy-site:
+    needs: build-site
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

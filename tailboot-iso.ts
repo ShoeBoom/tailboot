@@ -9,7 +9,6 @@
 
 const encoder = new TextEncoder();
 
-export const DEFAULT_REPOSITORY = "ShoeBoom/tailboot";
 export const AUTH_KEY_CAPACITY = 512;
 
 const SLOT_START = "TAILBOOT_TAILSCALE_AUTH_KEY_V1_BEGIN\n";
@@ -22,7 +21,22 @@ export const AUTH_KEY_PLACEHOLDER =
 
 const placeholderBytes = encoder.encode(AUTH_KEY_PLACEHOLDER);
 
-function accessKeyRecord(accessKey) {
+export type IsoSource = Blob | Response | ReadableStream<Uint8Array>;
+export type PatchProgress = {
+  inputBytes: number;
+  totalBytes?: number;
+};
+
+type PatchOptions = {
+  source: IsoSource;
+  accessKey: string;
+  destination: WritableStream<Uint8Array>;
+  onProgress?: (progress: PatchProgress) => void;
+  signal?: AbortSignal;
+  totalBytes?: number;
+};
+
+function accessKeyRecord(accessKey: string) {
   if (typeof accessKey !== "string" || accessKey.length === 0) {
     throw new TypeError("The Tailscale auth key must be a non-empty string.");
   }
@@ -47,16 +61,12 @@ function accessKeyRecord(accessKey) {
   );
 }
 
-function bytesFrom(chunk) {
+function bytesFrom(chunk: Uint8Array) {
   if (chunk instanceof Uint8Array) return chunk;
-  if (ArrayBuffer.isView(chunk)) {
-    return new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength);
-  }
-  if (chunk instanceof ArrayBuffer) return new Uint8Array(chunk);
   throw new TypeError("The ISO stream must contain byte chunks.");
 }
 
-function concatBytes(left, right) {
+function concatBytes(left: Uint8Array, right: Uint8Array) {
   if (left.byteLength === 0) return right;
   const joined = new Uint8Array(left.byteLength + right.byteLength);
   joined.set(left);
@@ -64,7 +74,11 @@ function concatBytes(left, right) {
   return joined;
 }
 
-function indexOfBytes(haystack, needle, fromIndex = 0) {
+function indexOfBytes(
+  haystack: Uint8Array,
+  needle: Uint8Array,
+  fromIndex = 0,
+) {
   const lastStart = haystack.byteLength - needle.byteLength;
 
   outer: for (let index = fromIndex; index <= lastStart; index += 1) {
@@ -77,11 +91,8 @@ function indexOfBytes(haystack, needle, fromIndex = 0) {
   return -1;
 }
 
-function isoStream(source) {
-  // Structural checks also accept streams and blobs created in another frame.
-  if (typeof source?.getReader === "function") return source;
-  if (typeof source?.stream === "function") return source.stream();
-  if (typeof Response !== "undefined" && source instanceof Response) {
+function isoStream(source: IsoSource) {
+  if (source instanceof Response) {
     if (!source.ok) {
       throw new Error(`ISO download failed with HTTP ${source.status}.`);
     }
@@ -89,10 +100,17 @@ function isoStream(source) {
     return source.body;
   }
 
-  throw new TypeError("source must be a Blob, Response, or ReadableStream.");
+  if (source instanceof Blob) return source.stream();
+  return source;
 }
 
-function isoPatcher(accessKey, { onProgress, totalBytes } = {}) {
+function isoPatcher(
+  accessKey: string,
+  {
+    onProgress,
+    totalBytes,
+  }: Pick<PatchOptions, "onProgress" | "totalBytes"> = {},
+) {
   const replacementBytes = accessKeyRecord(accessKey);
   const overlapSize = placeholderBytes.byteLength - 1;
   let pending = new Uint8Array();
@@ -160,88 +178,21 @@ export async function patchTailbootIso({
   onProgress,
   signal,
   totalBytes,
-}) {
+}: PatchOptions) {
   if (typeof destination?.getWriter !== "function") {
     throw new TypeError("destination must be a WritableStream.");
   }
 
-  const patcher = isoPatcher(accessKey, { onProgress, totalBytes });
+  let patcher;
+  try {
+    patcher = isoPatcher(accessKey, { onProgress, totalBytes });
+  } catch (error) {
+    await destination.abort(error);
+    throw error;
+  }
+
   await isoStream(source).pipeThrough(patcher.stream).pipeTo(destination, {
     signal,
   });
   return patcher.result();
-}
-
-/** Resolve the single .iso asset from a repository's latest GitHub release. */
-export async function findLatestIsoRelease({
-  repository = DEFAULT_REPOSITORY,
-  fetch: fetchImpl = globalThis.fetch,
-  signal,
-} = {}) {
-  if (!/^[^/\s]+\/[^/\s]+$/.test(repository)) {
-    throw new TypeError('repository must have the form "owner/name".');
-  }
-  if (typeof fetchImpl !== "function") {
-    throw new TypeError("A fetch implementation is required.");
-  }
-
-  const response = await fetchImpl(
-    `https://api.github.com/repos/${repository}/releases/latest`,
-    {
-      headers: { Accept: "application/vnd.github+json" },
-      signal,
-    },
-  );
-  if (!response.ok) {
-    throw new Error(`GitHub release lookup failed with HTTP ${response.status}.`);
-  }
-
-  const release = await response.json();
-  const assets = release.assets?.filter(
-    (asset) =>
-      typeof asset.name === "string" &&
-      asset.name.toLowerCase().endsWith(".iso") &&
-      typeof asset.browser_download_url === "string",
-  );
-
-  if (assets?.length !== 1) {
-    throw new Error(
-      `The latest GitHub release must contain exactly one .iso asset; found ${assets?.length ?? 0}.`,
-    );
-  }
-
-  const [asset] = assets;
-  return {
-    fileName: asset.name,
-    downloadUrl: asset.browser_download_url,
-    size: typeof asset.size === "number" ? asset.size : undefined,
-    releaseTag: release.tag_name,
-  };
-}
-
-/** Look up, download, patch, and stream the latest release ISO. */
-export async function patchLatestTailbootIso({
-  repository = DEFAULT_REPOSITORY,
-  accessKey,
-  destination,
-  onProgress,
-  signal,
-  fetch: fetchImpl = globalThis.fetch,
-}) {
-  const asset = await findLatestIsoRelease({
-    repository,
-    fetch: fetchImpl,
-    signal,
-  });
-  const response = await fetchImpl(asset.downloadUrl, { signal });
-  const result = await patchTailbootIso({
-    source: response,
-    accessKey,
-    destination,
-    onProgress,
-    signal,
-    totalBytes: asset.size,
-  });
-
-  return { ...asset, ...result };
 }

@@ -1,51 +1,93 @@
 # Tailboot
 
-<img width="435" height="698" alt="Tailboot logo" src="https://github.com/user-attachments/assets/7d94d7f5-39bc-45f2-abe1-586bdd395f78" />
+Tailboot is a headless Debian 13 live image that automatically joins a
+Tailscale network and enables Tailscale SSH. It is intended to be flashed to a
+USB drive and booted directly; it is not an installer.
 
-`tailboot-iso.js` is a dependency-free browser module that downloads the
-latest release ISO and embeds a Tailscale auth key without loading the entire
-image into JavaScript memory.
+The image does not include a conventional SSH server. The build explicitly
+purges and masks OpenSSH server units, and the boot service enables only
+Tailscale's SSH implementation.
 
-The base image must include the exported `AUTH_KEY_PLACEHOLDER` exactly once as
-an uncompressed `/TAILBOOT.KEY` file in the ISO9660 root. At boot, Tailboot can
-read that file from `/run/live/medium/TAILBOOT.KEY`, extract the text between
-the `BEGIN` and `END` lines, and trim its trailing spaces. Do not put this file
-inside the compressed SquashFS.
+## How customization works
 
-## Browser usage
+The base ISO contains a fixed-size placeholder in the uncompressed
+`/TAILBOOT.KEY` file. The browser-side TypeScript module replaces that record
+without changing the length of the image. The live system reads it from
+`/run/live/medium/TAILBOOT.KEY`, copies the key briefly to a mode-`0600` file in
+`/run`, and passes its path to `tailscale up --ssh`.
 
-Call this from a user gesture because browsers require one to show a save-file
-picker:
+GitHub release downloads do not expose the cross-origin browser headers needed
+for a direct `fetch` from GitHub Pages. The site therefore links to its pinned
+base ISO, then streams the user-selected download through the browser's
+file-system writer. Only the current file chunk and a small marker overlap are
+held in the JavaScript heap.
 
-```js
-import { patchLatestTailbootIso } from "./tailboot-iso.js";
+## Website
 
-const file = await showSaveFilePicker({
-  suggestedName: "tailboot.iso",
-  types: [
-    {
-      description: "Tailboot ISO",
-      accept: { "application/x-iso9660-image": [".iso"] },
-    },
-  ],
-});
+The single-page Astro site is in [`src/pages/index.astro`](src/pages/index.astro)
+and the streaming customizer is [`tailboot-iso.ts`](tailboot-iso.ts).
 
-const destination = await file.createWritable();
-const result = await patchLatestTailbootIso({
-  accessKey: document.querySelector("#tailscale-key").value,
-  destination,
-  onProgress: ({ inputBytes, totalBytes }) => {
-    console.log(totalBytes ? inputBytes / totalBytes : inputBytes);
-  },
-});
-
-console.log(`Wrote ${result.fileName} from release ${result.releaseTag}`);
+```sh
+pnpm install
+pnpm dev
 ```
 
-`patchTailbootIso` also accepts an existing `Blob`, `Response`, or
-`ReadableStream` as its source. Output is always streamed to a `WritableStream`.
-The image length never changes, so its ISO and hybrid-boot offsets remain
-intact.
+For a production build, bake in one specific release asset:
 
-Use a short-lived, one-off Tailscale auth key. The customized image contains
-the credential in plain text and must be treated as sensitive.
+```sh
+PUBLIC_TAILBOOT_ISO_URL="https://github.com/ShoeBoom/tailboot/releases/download/v1.0.0/tailboot-v1.0.0-amd64.iso" \
+PUBLIC_TAILBOOT_ISO_NAME="tailboot-v1.0.0-amd64.iso" \
+PUBLIC_TAILBOOT_RELEASE="v1.0.0" \
+pnpm build
+```
+
+There is deliberately no runtime “latest release” lookup in the website. A
+deployed site always points to the immutable ISO URL baked into that site
+build.
+
+## Building the image
+
+On a Debian 13 build host with `live-build` and `curl` installed:
+
+```sh
+sudo ./scripts/build-iso.sh tailboot-local-amd64.iso
+```
+
+The result is written to `dist/`. Builds use Tailscale's official Debian
+repository and include common Wi-Fi and wired-network firmware.
+
+The ISO's internal media-check manifest is disabled because customizing
+`/TAILBOOT.KEY` necessarily changes that file. Every GitHub release includes a
+separate SHA-256 file for verifying the unmodified base ISO.
+
+## Releases and GitHub Pages
+
+Pushing a tag such as `v1.0.0` runs
+[`release.yml`](.github/workflows/release.yml):
+
+1. Build the ISO and publish it plus its SHA-256 checksum to the GitHub release.
+2. Build Astro with that exact release asset URL.
+3. Deploy the static result to GitHub Pages.
+
+Jobs run in that order. The existing Pages deployment remains active if either
+the new ISO or site build fails, so it continues using the previous ISO until a
+new website deployment succeeds. Reruns never overwrite an existing ISO asset.
+
+Before the first deployment, select **GitHub Actions** as the Pages source in
+the repository settings.
+
+## Credential lifecycle
+
+The customized image contains the Tailscale auth key in plain text and must be
+treated as sensitive. A one-off key is suitable for a one-time boot. A
+stateless live image that must join again after every reboot requires a reusable
+key; keep its lifetime and permissions as narrow as possible. Tagged and
+pre-approved keys are useful for unattended machines when permitted by the
+tailnet policy.
+
+Run all checks with:
+
+```sh
+pnpm test
+pnpm build
+```

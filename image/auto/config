@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -eu
+
+lb config noauto \
+  --mode debian \
+  --distribution trixie \
+  --architecture amd64 \
+  --archive-areas "main non-free-firmware" \
+  --apt-recommends false \
+  --apt-source-archives false \
+  --binary-image iso-hybrid \
+  --bootloaders "syslinux grub-efi" \
+  --bootappend-live "boot=live components hostname=tailboot username=tailboot" \
+  --checksums none \
+  --debian-installer none \
+  --iso-application "Tailboot" \
+  --iso-publisher "Tailboot" \
+  --iso-volume "TAILBOOT" \
+  --source false \
+  --win32-loader false \
+  --zsync false \
+  "${@}"
+

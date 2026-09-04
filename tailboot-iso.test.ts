@@ -4,14 +4,14 @@ import test from "node:test";
 import {
   AUTH_KEY_CAPACITY,
   AUTH_KEY_PLACEHOLDER,
-  findLatestIsoRelease,
   patchTailbootIso,
-} from "./tailboot-iso.js";
+} from "./tailboot-iso.ts";
+import type { PatchProgress } from "./tailboot-iso.ts";
 
-const encode = (value) => new TextEncoder().encode(value);
-const decode = (value) => new TextDecoder().decode(value);
+const encode = (value: string) => new TextEncoder().encode(value);
+const decode = (value: Uint8Array) => new TextDecoder().decode(value);
 
-function chunkedStream(bytes, chunkSizes) {
+function chunkedStream(bytes: Uint8Array, chunkSizes: number[]) {
   let offset = 0;
   let chunk = 0;
   return new ReadableStream({
@@ -26,14 +26,18 @@ function chunkedStream(bytes, chunkSizes) {
 }
 
 function memoryDestination() {
-  const chunks = [];
+  const chunks: Uint8Array[] = [];
   return {
     chunks,
-    stream: new WritableStream({ write: (chunk) => chunks.push(chunk.slice()) }),
+    stream: new WritableStream({
+      write: (chunk) => {
+        chunks.push(chunk.slice());
+      },
+    }),
   };
 }
 
-function join(chunks) {
+function join(chunks: Uint8Array[]) {
   const size = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
   const joined = new Uint8Array(size);
   let offset = 0;
@@ -49,7 +53,7 @@ test("patches across arbitrary chunk boundaries without changing ISO size", asyn
   const after = "\0fake ISO footer";
   const input = encode(before + AUTH_KEY_PLACEHOLDER + after);
   const output = memoryDestination();
-  const progress = [];
+  const progress: PatchProgress[] = [];
 
   const result = await patchTailbootIso({
     source: chunkedStream(input, [1, 7, 31, 2]),
@@ -96,31 +100,3 @@ test("rejects unsafe or oversized key values", async () => {
     );
   }
 });
-
-test("selects the only ISO in the latest GitHub release", async () => {
-  const fetch = async () =>
-    new Response(
-      JSON.stringify({
-        tag_name: "v1.2.3",
-        assets: [
-          { name: "checksums.txt", browser_download_url: "ignored", size: 10 },
-          {
-            name: "tailboot.iso",
-            browser_download_url: "https://example.test/tailboot.iso",
-            size: 123,
-          },
-        ],
-      }),
-    );
-
-  assert.deepEqual(
-    await findLatestIsoRelease({ repository: "owner/project", fetch }),
-    {
-      fileName: "tailboot.iso",
-      downloadUrl: "https://example.test/tailboot.iso",
-      size: 123,
-      releaseTag: "v1.2.3",
-    },
-  );
-});
-
