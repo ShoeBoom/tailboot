@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -eu
+
+# Tailboot uses Tailscale's SSH server only. Keep a conventional SSH daemon
+# absent and masked even if a future package accidentally pulls it in.
+if dpkg-query --show --showformat='${Status}' openssh-server 2>/dev/null \
+  | grep -Fq 'install ok installed'; then
+  apt-get purge --yes openssh-server
+fi
+
+ln -sfn /dev/null /etc/systemd/system/ssh.service
+ln -sfn /dev/null /etc/systemd/system/ssh.socket
+ln -sfn /dev/null /etc/systemd/system/sshd.service
+
+systemctl enable NetworkManager.service
+systemctl enable tailscaled.service
+systemctl enable tailboot.service

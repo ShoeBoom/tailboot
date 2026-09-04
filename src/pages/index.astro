@@ -1,0 +1,227 @@
+---
+const isoUrl = import.meta.env.PUBLIC_TAILBOOT_ISO_URL ?? "";
+const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
+const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta
+      name="description"
+      content="Create a Tailboot live ISO with Tailscale SSH enabled."
+    />
+    <title>Tailboot</title>
+  </head>
+  <body>
+    <main>
+      <h1>Tailboot</h1>
+      <p>
+        Create a headless Debian live USB that joins your tailnet and accepts
+        Tailscale SSH connections.
+      </p>
+
+      <form
+        id="customizer"
+        data-iso-url={isoUrl}
+        data-iso-name={isoName}
+      >
+        <p class="step">
+          1. <a href={isoUrl || undefined}>Download the {release} base ISO</a>
+        </p>
+        <label for="base-image">2. Select the downloaded base ISO</label>
+        <input
+          id="base-image"
+          name="base-image"
+          type="file"
+          accept=".iso,application/x-iso9660-image"
+          required
+          disabled={!isoUrl}
+        />
+        <label for="auth-key">3. Tailscale auth key</label>
+        <input
+          id="auth-key"
+          name="auth-key"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="tskey-auth-…"
+          required
+        />
+        <button type="submit" disabled={!isoUrl}>4. Create ISO</button>
+        <progress id="progress" hidden></progress>
+        <p id="status" role="status" aria-live="polite">
+          {isoUrl ? `Base image: ${release}` : "No release image configured."}
+        </p>
+      </form>
+
+      <p class="note">
+        The key is inserted locally in your browser. The customized ISO contains
+        it in plain text, so keep the image private.
+      </p>
+    </main>
+
+    <script>
+      import { patchTailbootIso } from "../../tailboot-iso.ts";
+
+      type SaveFilePicker = (options: {
+        suggestedName: string;
+        types: Array<{
+          description: string;
+          accept: Record<string, string[]>;
+        }>;
+      }) => Promise<{
+        createWritable: () => Promise<WritableStream<Uint8Array>>;
+      }>;
+
+      const form = document.querySelector<HTMLFormElement>("#customizer");
+      const isoInput = document.querySelector<HTMLInputElement>("#base-image");
+      const keyInput = document.querySelector<HTMLInputElement>("#auth-key");
+      const button = document.querySelector<HTMLButtonElement>("button");
+      const progress = document.querySelector<HTMLProgressElement>("#progress");
+      const status = document.querySelector<HTMLParagraphElement>("#status");
+      const pickFile = (window as Window & { showSaveFilePicker?: SaveFilePicker })
+        .showSaveFilePicker;
+
+      if (!form || !isoInput || !keyInput || !button || !progress || !status) {
+        throw new Error("Tailboot form is incomplete.");
+      }
+
+      if (!pickFile) {
+        button.disabled = true;
+        status.textContent =
+          "This browser cannot stream large files directly to disk.";
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!pickFile || !form.dataset.isoUrl) return;
+        const source = isoInput.files?.[0];
+        if (!source) return;
+
+        button.disabled = true;
+        progress.hidden = false;
+        progress.removeAttribute("value");
+        status.textContent = "Choose where to save the customized ISO.";
+
+        try {
+          const handle = await pickFile.call(window, {
+            suggestedName: (form.dataset.isoName ?? "tailboot.iso").replace(
+              /\.iso$/,
+              "-custom.iso",
+            ),
+            types: [
+              {
+                description: "Tailboot ISO",
+                accept: { "application/x-iso9660-image": [".iso"] },
+              },
+            ],
+          });
+          status.textContent = "Customizing…";
+          await patchTailbootIso({
+            source,
+            accessKey: keyInput.value,
+            destination: await handle.createWritable(),
+            totalBytes: source.size,
+            onProgress: ({ inputBytes, totalBytes }) => {
+              if (!totalBytes) return;
+              progress.max = totalBytes;
+              progress.value = inputBytes;
+            },
+          });
+
+          keyInput.value = "";
+          progress.value = progress.max;
+          status.textContent = "ISO ready. Flash it to a USB drive.";
+        } catch (error) {
+          progress.hidden = true;
+          status.textContent =
+            error instanceof Error ? error.message : "Could not create the ISO.";
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  :global(*) {
+    box-sizing: border-box;
+  }
+
+  :global(body) {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: #f4f5f7;
+    color: #17191c;
+    font-family: system-ui, sans-serif;
+  }
+
+  main {
+    width: min(100%, 34rem);
+    padding: 2rem;
+    background: white;
+    border: 1px solid #d9dce1;
+    border-radius: 0.75rem;
+  }
+
+  h1 {
+    margin: 0 0 0.5rem;
+  }
+
+  form {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .step {
+    margin: 0;
+  }
+
+  label {
+    font-weight: 650;
+  }
+
+  input,
+  button {
+    min-height: 2.75rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid #aeb4bd;
+    border-radius: 0.4rem;
+    font: inherit;
+  }
+
+  button {
+    border-color: #111827;
+    background: #111827;
+    color: white;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  progress {
+    width: 100%;
+  }
+
+  #status,
+  .note {
+    margin: 0;
+    color: #565d68;
+    font-size: 0.9rem;
+  }
+
+  .note {
+    margin-top: 1.5rem;
+  }
+</style>
