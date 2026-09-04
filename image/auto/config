@@ -9,6 +9,7 @@ lb config noauto \
   --archive-areas "main non-free-firmware" \
   --apt-recommends false \
   --apt-source-archives false \
+  --debootstrap-options "--variant=minbase" \
   --binary-image iso-hybrid \
   --bootloaders "syslinux grub-efi" \
   --bootappend-live "boot=live components hostname=tailboot username=tailboot" \
@@ -21,4 +22,3 @@ lb config noauto \
   --win32-loader false \
   --zsync false \
   "${@}"
-

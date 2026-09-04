@@ -36,9 +36,6 @@ curl --fail --silent --show-error --location \
   https://pkgs.tailscale.com/stable/debian/trixie.asc \
   --output config/archives/tailscale.key.chroot
 
-# Keep the embedded credential root-readable after the placeholder is patched.
-chmod 0600 config/includes.binary/TAILBOOT.KEY
-
 lb config
 lb build
 

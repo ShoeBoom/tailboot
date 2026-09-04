@@ -123,16 +123,13 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
             ],
           });
           status.textContent = "Customizing…";
+          progress.max = source.size;
+          progress.value = 0;
           await patchTailbootIso({
             source,
             accessKey: keyInput.value,
             destination: await handle.createWritable(),
-            totalBytes: source.size,
-            onProgress: ({ inputBytes, totalBytes }) => {
-              if (!totalBytes) return;
-              progress.max = totalBytes;
-              progress.value = inputBytes;
-            },
+            onProgress: (inputBytes) => (progress.value = inputBytes),
           });
 
           keyInput.value = "";

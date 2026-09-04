@@ -3,15 +3,6 @@ firmware-iwlwifi
 firmware-linux-free
 firmware-misc-nonfree
 firmware-realtek
-iproute2
-iputils-ping
-less
-linux-image-amd64
-live-boot
-live-config
 network-manager
 sudo
-systemd-sysv
 tailscale
-vim-tiny
-
