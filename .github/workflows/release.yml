@@ -73,7 +73,10 @@ jobs:
           echo "release_commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
       - name: Build ISO
-        run: sudo ./scripts/build-iso.sh "${{ steps.metadata.outputs.iso_name }}"
+        run: |
+          # Keep the directory runner-owned so the checksum step can write to it.
+          mkdir -p dist
+          sudo ./scripts/build-iso.sh "${{ steps.metadata.outputs.iso_name }}"
 
       - name: Verify image contents and boot records
         run: ./scripts/verify-iso.sh "dist/${{ steps.metadata.outputs.iso_name }}"
