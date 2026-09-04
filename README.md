@@ -8,9 +8,8 @@ USB drive and booted directly; it is not an installer.
 
 The base ISO contains a fixed-size placeholder in the uncompressed
 `/TAILBOOT.KEY` file. The browser-side TypeScript module replaces that record
-without changing the length of the image. The live system reads it from
-`/run/live/medium/TAILBOOT.KEY`, copies the key briefly to a mode-`0600` file in
-`/run`, and passes its path to `tailscale up --ssh`.
+without changing the length of the image. At boot, the system passes that file
+directly to `tailscale up --ssh`.
 
 GitHub release downloads do not expose the cross-origin browser headers needed
 for a direct `fetch` from GitHub Pages. The site therefore links to its pinned
@@ -80,12 +79,10 @@ the repository settings.
 
 ## Credential lifecycle
 
-The customized image contains the Tailscale auth key in plain text and must be
-treated as sensitive. A one-off key is suitable for a one-time boot. A
-stateless live image that must join again after every reboot requires a reusable
-key; keep its lifetime and permissions as narrow as possible. Tagged and
-pre-approved keys are useful for unattended machines when permitted by the
-tailnet policy.
+Use a reusable, ephemeral Tailscale auth key with a 90-day expiry. When it
+expires, generate another key and customize a new ISO. Every boot creates a new
+ephemeral Tailscale machine identity. The customized image contains the key in
+plain text, so keep it private.
 
 Run all checks with:
 
