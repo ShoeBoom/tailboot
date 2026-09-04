@@ -1,12 +1,12 @@
 [Unit]
 Description=Join Tailscale and enable Tailscale SSH
 Wants=network-online.target
-After=network-online.target tailscaled.service
-Requires=tailscaled.service
+After=network-online.target tailscaled.service tailboot-configure.service
+Requires=tailscaled.service tailboot-configure.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/tailscale up --auth-key=file:/run/live/medium/TAILBOOT.KEY --ssh --timeout=2m
+ExecStart=/usr/bin/tailscale up --auth-key=file:/run/tailboot/auth.key --ssh --timeout=2m
 RemainAfterExit=yes
 Restart=on-failure
 RestartSec=15s

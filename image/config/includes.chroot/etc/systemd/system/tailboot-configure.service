@@ -1,0 +1,14 @@
+[Unit]
+Description=Configure Tailboot credentials and optional Wi-Fi
+After=live-config.service
+Before=NetworkManager.service tailscaled.service
+
+[Service]
+Type=oneshot
+RuntimeDirectory=tailboot
+RuntimeDirectoryMode=0700
+ExecStart=/usr/local/sbin/tailboot-configure
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

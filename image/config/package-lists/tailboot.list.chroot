@@ -3,8 +3,11 @@ firmware-iwlwifi
 firmware-linux-free
 firmware-misc-nonfree
 firmware-realtek
+jq
 network-manager
 sudo
 tailscale
 # Required to create the live user when APT recommends are disabled.
 user-setup
+# NetworkManager only recommends this; required for Wi-Fi authentication.
+wpasupplicant

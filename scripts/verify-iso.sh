@@ -14,9 +14,9 @@ work_dir=$(mktemp -d)
 trap 'rm -rf "${work_dir}"' EXIT HUP INT TERM
 
 xorriso -osirrox on -indev "${iso}" \
-  -extract /TAILBOOT.KEY "${work_dir}/TAILBOOT.KEY" >/dev/null 2>&1
-cmp "${repository_dir}/image/config/includes.binary/TAILBOOT.KEY" \
-  "${work_dir}/TAILBOOT.KEY"
+  -extract /TAILBOOT.JSON "${work_dir}/TAILBOOT.JSON" >/dev/null 2>&1
+cmp "${repository_dir}/image/config/includes.binary/TAILBOOT.JSON" \
+  "${work_dir}/TAILBOOT.JSON"
 
 xorriso -osirrox on -indev "${iso}" \
   -extract /live/filesystem.squashfs "${work_dir}/filesystem.squashfs" \
@@ -26,7 +26,7 @@ unsquashfs -cat "${work_dir}/filesystem.squashfs" var/lib/dpkg/status \
 
 # live-config creates the login account at boot, so it is not in the image's
 # /etc/passwd yet. Check its dependencies even with APT recommends disabled.
-for package in live-config live-config-systemd user-setup sudo tailscale; do
+for package in live-config live-config-systemd user-setup sudo tailscale jq network-manager wpasupplicant; do
   if ! awk -v package="${package}" 'BEGIN { RS = "" }
     $0 ~ "(^|\n)Package: " package "(\n|$)" &&
     $0 ~ "(^|\n)Status: install ok installed(\n|$)" { found = 1 }
@@ -39,12 +39,23 @@ done
 
 unsquashfs -ll "${work_dir}/filesystem.squashfs" \
   > "${work_dir}/squashfs-files"
-grep -Fq "etc/systemd/system/tailboot.service" \
-  "${work_dir}/squashfs-files"
+for service in tailboot tailboot-configure; do
+  unsquashfs -cat "${work_dir}/filesystem.squashfs" \
+    "etc/systemd/system/${service}.service" > "${work_dir}/${service}.service"
+  cmp "${repository_dir}/image/config/includes.chroot/etc/systemd/system/${service}.service" \
+    "${work_dir}/${service}.service"
+  grep -Fq "etc/systemd/system/multi-user.target.wants/${service}.service" \
+    "${work_dir}/squashfs-files"
+done
+unsquashfs -cat "${work_dir}/filesystem.squashfs" \
+  usr/local/sbin/tailboot-configure > "${work_dir}/tailboot-configure"
+cmp "${repository_dir}/image/config/includes.chroot/usr/local/sbin/tailboot-configure" \
+  "${work_dir}/tailboot-configure"
+grep -Eq '^-rwx[^ ]* .*usr/local/sbin/tailboot-configure$' "${work_dir}/squashfs-files"
 
 xorriso -indev "${iso}" -report_el_torito plain \
   > "${work_dir}/boot-report" 2>&1
 grep -Fq "BIOS" "${work_dir}/boot-report"
 grep -Fq "UEFI" "${work_dir}/boot-report"
 
-echo "Verified Tailboot key slot, login dependencies, Tailscale, service, and BIOS/UEFI boot records."
+echo "Verified Tailboot JSON slot, login and network dependencies, services, and BIOS/UEFI boot records."
