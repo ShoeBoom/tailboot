@@ -1,86 +1,49 @@
 # Tailboot release proxy
 
-A standalone Cloudflare Worker that streams Tailboot release ISOs from GitHub.
-It has no runtime dependencies, storage, release metadata, or imports from the
-rest of this repository. It can be developed and deployed independently of the
-website and ISO builds.
+A standalone Cloudflare Worker with no runtime dependencies, storage, or
+imports from the website or image build. It needs no redeployment for new ISOs.
 
-## Interface
-
-`GET /vYYYY.MM.DD.HHMMSS` forwards to:
+`GET /vYYYY.MM.DD.HHMMSS` streams:
 
 ```text
 https://github.com/ShoeBoom/tailboot/releases/download/<tag>/tailboot-<tag>-amd64.iso
 ```
 
-The upstream repository and filename pattern are fixed. Callers cannot choose
-another host, repository, or asset. The Worker supports `GET`, `HEAD`, and CORS
-preflight requests. It streams the full ISO without buffering it, forwarding
-credentials, or forwarding range requests.
+The repository and filename pattern are fixed. Callers cannot choose another
+upstream or asset. The Worker supports GET, HEAD, and CORS preflight requests;
+it forwards no client credentials or range headers.
 
-## Browser access
+## Configuration and deployment
 
-Set `vars.ALLOWED_ORIGIN` in [`wrangler.jsonc`](wrangler.jsonc) to the site's
-exact origin. The default is `https://shoeboom.github.io`. The Worker rejects
-missing, opaque (`null`), and other origins before making an upstream request.
-Allowed requests receive an exact `Access-Control-Allow-Origin` header,
-including when the upstream fails. It does not allow credentialed requests.
+Set `vars.ALLOWED_ORIGIN` in [wrangler.jsonc](wrangler.jsonc) to the website's
+origin. It defaults to `https://shoeboom.github.io`. Requests with a different,
+missing, or opaque (`null`) origin are rejected before contacting GitHub.
 
-This prevents other origins from using the proxy directly in a browser.
-Origins contain no path: all pages hosted at `https://shoeboom.github.io` share
-that origin. CORS is not authentication; non-browser clients can spoof the
-`Origin` header. No secret can be kept in a public static website to prevent
-that.
-
-## Deployment
+CORS limits browser access, not non-browser clients that can spoof `Origin`.
+All pages under `https://shoeboom.github.io` share the same origin.
 
 From this directory:
 
 ```sh
 pnpm install
-pnpm types
-pnpm deploy
+pnpm types    # Regenerate after configuration changes.
+pnpm deploy   # Runs checks and tests before deploying.
 ```
 
-The deploy command runs type checks and tests before invoking Wrangler. Use
-`pnpm exec wrangler login` first if the CLI is not already authenticated.
-The configured Worker name is `tailboot-proxy`.
-
-Set the website's `TAILBOOT_PROXY_URL` variable to the origin Wrangler reports,
-such as `https://tailboot-proxy.YOUR-SUBDOMAIN.workers.dev`. No release tag is
-configured on the Worker, and publishing an ISO requires no Worker deployment.
-Redeploy only when proxy code or configuration changes. Regenerate types with
-`pnpm types` after changing the configuration.
+If needed, authenticate with `pnpm exec wrangler login` first. Set the GitHub
+Actions repository variable `TAILBOOT_PROXY_URL` to the deployed Worker origin.
+The release workflow builds the website's ISO URL from this value and its tag.
 
 ## Local development
-
-From this directory, allow the local static site's origin:
 
 ```sh
 pnpm dev --port 8787 --var ALLOWED_ORIGIN:http://localhost:4321
 ```
 
-In another terminal, build and preview the site from the repository root with
-an existing release tag and its published byte count:
+Use the [website's build instructions](../README.md#website) with
+`PUBLIC_TAILBOOT_ISO_URL=http://localhost:8787/<release-tag>`, then run
+`pnpm preview` at the repository root and open `http://localhost:4321/tailboot/`.
+Downloads use the published ISO.
 
-```sh
-TAILBOOT_RELEASE=v2026.09.04.153117 \
-TAILBOOT_ISO_SIZE=895483904 \
-TAILBOOT_PROXY_URL=http://localhost:8787 \
-pnpm build
-pnpm preview
-```
-
-Open `http://localhost:4321/tailboot/`. Downloads use the real published ISO.
-The site's plain development mode leaves downloading disabled.
-
-To check the proxy without downloading the ISO:
-
-```sh
-curl --head \
-  --header 'Origin: http://localhost:4321' \
-  http://localhost:8787/v2026.09.04.153117
-```
-
-Run `pnpm check` for type checks and unit tests. The unit tests use fake upstream
+Run `pnpm check` here for type checks and unit tests. Tests use fake upstream
 responses and do not download release assets.

@@ -4,3 +4,4 @@ export default defineConfig({
   site: "https://shoeboom.github.io",
   base: "/tailboot",
 });
+

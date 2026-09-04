@@ -1,8 +1,14 @@
 ---
 import iconUrl from "../../icon.svg?url";
-import { getRelease } from "../../release.ts";
 
-const release = import.meta.env.DEV ? null : getRelease(process.env);
+const isoUrl = import.meta.env.PUBLIC_TAILBOOT_ISO_URL ?? "";
+const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
+const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
+const isoSize = Number(import.meta.env.PUBLIC_TAILBOOT_ISO_SIZE);
+
+if (isoUrl && (!Number.isSafeInteger(isoSize) || isoSize <= 0)) {
+  throw new Error("Set PUBLIC_TAILBOOT_ISO_SIZE to the published ISO's byte count.");
+}
 ---
 
 <!doctype html>
@@ -27,9 +33,9 @@ const release = import.meta.env.DEV ? null : getRelease(process.env);
 
       <form
         id="customizer"
-        data-iso-url={release?.isoUrl}
-        data-iso-name={release?.isoName}
-        data-iso-size={release?.size}
+        data-iso-url={isoUrl}
+        data-iso-name={isoName}
+        data-iso-size={isoUrl ? isoSize : undefined}
       >
         <label for="auth-key">Tailscale auth key</label>
         <input
@@ -43,8 +49,8 @@ const release = import.meta.env.DEV ? null : getRelease(process.env);
         <noscript>Enable JavaScript to customize an ISO in your browser.</noscript>
         <progress id="progress" hidden></progress>
         <p id="status" role="status" aria-live="polite">
-          {release
-            ? `Base image: ${release.tag}`
+          {isoUrl
+            ? `Base image: ${release}`
             : "No release image configured."}
         </p>
       </form>
@@ -56,7 +62,7 @@ const release = import.meta.env.DEV ? null : getRelease(process.env);
     </main>
 
     <script>
-      import { patchTailbootIso } from "../tailboot-iso.ts";
+      import { patchTailbootIso } from "../../tailboot-iso.ts";
 
       type SaveFilePicker = (options: {
         suggestedName: string;

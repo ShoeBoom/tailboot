@@ -6,21 +6,7 @@ settings:
 
 importers:
 
-  .: {}
-
-  proxy:
-    devDependencies:
-      '@types/node':
-        specifier: ^26.4.0
-        version: 26.4.0
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      wrangler:
-        specifier: 4.127.1
-        version: 4.127.1
-
-  site:
+  .:
     dependencies:
       astro:
         specifier: ^7.2.9
@@ -35,6 +21,18 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+
+  proxy:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.4.0
+        version: 26.4.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      wrangler:
+        specifier: 4.127.1
+        version: 4.127.1
 
 packages:
 
