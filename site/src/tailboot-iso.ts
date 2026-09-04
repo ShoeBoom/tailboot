@@ -18,7 +18,7 @@ export const AUTH_KEY_PLACEHOLDER =
 const placeholderBytes = encoder.encode(AUTH_KEY_PLACEHOLDER);
 
 type PatchOptions = {
-  source: Blob;
+  source: Blob | ReadableStream<Uint8Array>;
   accessKey: string;
   destination: WritableStream<Uint8Array>;
   onProgress?: (inputBytes: number) => void;
@@ -102,9 +102,9 @@ function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) 
 /**
  * Patch an ISO while piping it to a WritableStream.
  *
- * A FileSystemWritableFileStream from showSaveFilePicker() is the ideal
- * destination: the ISO is written directly to disk and never held in full in
- * the browser's JavaScript heap.
+ * A FileSystemWritableFileStream from showSaveFilePicker() writes the ISO
+ * directly to disk. Other browsers can provide an in-memory destination and
+ * download the resulting Blob.
  */
 export async function patchTailbootIso({
   source,
@@ -112,8 +112,8 @@ export async function patchTailbootIso({
   destination,
   onProgress,
 }: PatchOptions) {
-  await source
-    .stream()
+  const stream = source instanceof Blob ? source.stream() : source;
+  await stream
     .pipeThrough(isoPatcher(accessKey, onProgress))
     .pipeTo(destination);
 }

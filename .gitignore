@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .astro/
+.wrangler/
+.dev.vars*
+.env*
 
 image/.build/
 image/binary/
@@ -22,4 +25,3 @@ image/config/hooks/live/*
 !image/config/hooks/live/0100-tailboot.hook.chroot
 image/config/hooks/normal/
 image/config/package-lists/live.list.chroot
-

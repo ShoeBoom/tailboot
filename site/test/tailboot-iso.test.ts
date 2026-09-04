@@ -5,7 +5,7 @@ import test from "node:test";
 import {
   AUTH_KEY_PLACEHOLDER,
   patchTailbootIso,
-} from "./tailboot-iso.ts";
+} from "../src/tailboot-iso.ts";
 
 const encode = (value: string) => new TextEncoder().encode(value);
 const decode = (value: Uint8Array) => new TextDecoder().decode(value);
@@ -64,7 +64,7 @@ function join(chunks: Uint8Array[]) {
 
 test("keeps the image key file in sync with the browser customizer", async () => {
   const keyFile = await readFile(
-    new URL("./image/config/includes.binary/TAILBOOT.KEY", import.meta.url),
+    new URL("../../image/config/includes.binary/TAILBOOT.KEY", import.meta.url),
     "utf8",
   );
   assert.equal(keyFile, AUTH_KEY_PLACEHOLDER);

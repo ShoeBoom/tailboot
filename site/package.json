@@ -1,0 +1,23 @@
+{
+  "name": "@tailboot/site",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "dev": "node scripts/prepare-release.ts && astro dev",
+    "build": "node scripts/prepare-release.ts && pnpm test && wrangler types --include-runtime=false --check && astro check && astro build",
+    "preview": "pnpm build && wrangler dev",
+    "test": "node --test test/*.test.ts",
+    "types": "wrangler types --include-runtime=false"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "14.2.5",
+    "astro": "^7.2.9"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/node": "^26.4.0",
+    "typescript": "^6.0.3",
+    "wrangler": "4.127.1"
+  }
+}

@@ -1,9 +1,10 @@
 ---
 import iconUrl from "../../icon.svg?url";
+import { release } from "../release.ts";
 
-const isoUrl = import.meta.env.PUBLIC_TAILBOOT_ISO_URL ?? "";
-const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
-const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
+export const prerender = true;
+
+const isoUrl = release.upstreamUrl ? "/tailboot.iso" : "";
 ---
 
 <!doctype html>
@@ -28,21 +29,10 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
 
       <form
         id="customizer"
-        data-iso-name={isoName}
+        data-iso-url={isoUrl}
+        data-iso-name={release.isoName}
       >
-        <p class="step">
-          1. <a href={isoUrl || undefined}>Download the {release} base ISO</a>
-        </p>
-        <label for="base-image">2. Select the downloaded base ISO</label>
-        <input
-          id="base-image"
-          name="base-image"
-          type="file"
-          accept=".iso,application/x-iso9660-image"
-          required
-          disabled={!isoUrl}
-        />
-        <label for="auth-key">3. Tailscale auth key</label>
+        <label for="auth-key">Tailscale auth key</label>
         <input
           id="auth-key"
           name="auth-key"
@@ -51,10 +41,12 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
           spellcheck="false"
           placeholder="tskey-auth-…"
         />
-        <button type="submit" disabled={!isoUrl}>4. Create ISO</button>
+        <button type="submit" disabled={!isoUrl}>Create ISO</button>
         <progress id="progress" hidden></progress>
         <p id="status" role="status" aria-live="polite">
-          {isoUrl ? `Base image: ${release}` : "No release image configured."}
+          {isoUrl
+            ? `Base image: ${release.tag}`
+            : "No release image configured."}
         </p>
       </form>
 
@@ -65,7 +57,7 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
     </main>
 
     <script>
-      import { patchTailbootIso } from "../../tailboot-iso.ts";
+      import { patchTailbootIso } from "../tailboot-iso.ts";
 
       type SaveFilePicker = (options: {
         suggestedName: string;
@@ -78,7 +70,6 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
       }>;
 
       const form = document.querySelector<HTMLFormElement>("#customizer")!;
-      const isoInput = document.querySelector<HTMLInputElement>("#base-image")!;
       const keyInput = document.querySelector<HTMLInputElement>("#auth-key")!;
       const button = document.querySelector<HTMLButtonElement>("button")!;
       const progress = document.querySelector<HTMLProgressElement>("#progress")!;
@@ -86,53 +77,87 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
       const pickFile = (window as Window & { showSaveFilePicker?: SaveFilePicker })
         .showSaveFilePicker;
 
-      if (!pickFile) {
-        button.disabled = true;
-        status.textContent =
-          "This browser cannot stream large files directly to disk.";
-      }
-
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (!pickFile) return;
-        const source = isoInput.files?.[0];
-        if (!source) return;
+        const isoUrl = form.dataset.isoUrl;
+        if (!isoUrl) return;
 
         button.disabled = true;
         progress.hidden = false;
         progress.removeAttribute("value");
-        status.textContent = "Choose where to save the customized ISO.";
 
         try {
-          const handle = await pickFile.call(window, {
-            suggestedName: (form.dataset.isoName ?? "tailboot.iso").replace(
-              /\.iso$/,
-              "-custom.iso",
-            ),
-            types: [
-              {
-                description: "Tailboot ISO",
-                accept: { "application/x-iso9660-image": [".iso"] },
-              },
-            ],
-          });
-          status.textContent = "Customizing…";
-          progress.max = source.size;
-          progress.value = 0;
+          const fileName = (form.dataset.isoName ?? "tailboot.iso").replace(
+            /\.iso$/,
+            "-custom.iso",
+          );
+          const handle = pickFile
+            ? await pickFile.call(window, {
+                suggestedName: fileName,
+                types: [
+                  {
+                    description: "Tailboot ISO",
+                    accept: { "application/x-iso9660-image": [".iso"] },
+                  },
+                ],
+              })
+            : undefined;
+
+          status.textContent = handle
+            ? "Downloading and customizing…"
+            : "Downloading and customizing in memory… Keep this tab open.";
+          const source = await fetch(isoUrl);
+          if (!source.ok || !source.body) {
+            throw new Error(`ISO download failed with HTTP ${source.status}.`);
+          }
+
+          const totalBytes = Number(source.headers.get("Content-Length"));
+          if (Number.isFinite(totalBytes) && totalBytes > 0) {
+            progress.max = totalBytes;
+            progress.value = 0;
+          }
+
+          const chunks: ArrayBuffer[] = [];
+          const destination = handle
+            ? await handle.createWritable()
+            : new WritableStream<Uint8Array>({
+                write(chunk) {
+                  const copy = new Uint8Array(chunk.byteLength);
+                  copy.set(chunk);
+                  chunks.push(copy.buffer);
+                },
+              });
           await patchTailbootIso({
-            source,
+            source: source.body,
             accessKey: keyInput.value,
-            destination: await handle.createWritable(),
+            destination,
             onProgress: (inputBytes) => (progress.value = inputBytes),
           });
 
+          if (!handle) {
+            const downloadUrl = URL.createObjectURL(
+              new Blob(chunks, { type: "application/x-iso9660-image" }),
+            );
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = fileName;
+            link.hidden = true;
+            document.body.append(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 60_000);
+          }
+
           keyInput.value = "";
-          progress.value = progress.max;
+          if (progress.max > 0) progress.value = progress.max;
           status.textContent = "ISO ready. Flash it to a USB drive.";
         } catch (error) {
           progress.hidden = true;
-          status.textContent =
-            error instanceof Error ? error.message : "Could not create the ISO.";
+          status.textContent = error instanceof DOMException && error.name === "AbortError"
+            ? "Customization cancelled."
+            : error instanceof Error
+              ? error.message
+              : "Could not create the ISO.";
         } finally {
           button.disabled = false;
         }
@@ -173,10 +198,6 @@ const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "development";
     display: grid;
     gap: 0.75rem;
     margin-top: 1.5rem;
-  }
-
-  .step {
-    margin: 0;
   }
 
   label {
