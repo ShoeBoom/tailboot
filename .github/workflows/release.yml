@@ -127,8 +127,8 @@ jobs:
             exit 1
           fi
 
-          # The URL is the credential. Send no release data; Cloudflare resolves
-          # the release from the commit checked out by Workers Builds.
+          # The URL is the credential. Cloudflare selects the latest published
+          # release during its build; the hook carries no release data.
           curl --fail --silent --show-error \
             --request POST \
             --output /dev/null \

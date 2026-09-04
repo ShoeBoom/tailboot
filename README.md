@@ -16,6 +16,11 @@ Callers cannot supply an upstream URL, and cross-site browser requests are
 rejected, so the endpoint cannot be repurposed as an open proxy. The Tailscale
 key never reaches the Worker.
 
+The page and proxy are deployed together and share the selected release's
+filename and byte count. The browser requires a complete download and exactly
+one key slot before completing the customized file. A page left open across a
+release change asks the user to reload instead of downloading a different ISO.
+
 Browsers with `showSaveFilePicker` stream the customized image directly to
 disk. Other browsers, including mobile browsers without that API, hold the
 customized image in memory and then start a normal download. That fallback
@@ -35,10 +40,11 @@ pnpm dev
 ```
 
 The development server deliberately has no release ISO configured. Every
-production build has Astro read the newest release tag pointing directly at its
-checked-out commit and bake the immutable asset URL into the page and Worker.
-If the commit has no release tag, the build fails and the current deployment
-remains active.
+production build reads GitHub's latest published release and requires both its
+ISO and checksum to be uploaded. Astro bakes the release URL and ISO size into
+the page and Worker. A missing or incomplete release fails the build, leaving
+the current deployment active. Builds do not depend on locally fetched Git tags
+or require website changes to have their own ISO release.
 
 ## Building the image
 
@@ -68,14 +74,14 @@ Scheduled and manual runs create a UTC CalVer tag such as
    checksum to a GitHub Release.
 2. Only after that succeeds, Actions sends an empty `POST` to a Cloudflare
    Workers Builds deploy hook.
-3. Cloudflare checks out the hook's configured branch. The build uses the
-   release tag on that exact commit and deploys it.
+3. Cloudflare checks out the hook's configured branch. The build selects the
+   latest published release once and deploys the page and proxy together.
 
 The hook does not carry a tag, URL, or asset name. Reruns never overwrite an
-existing ISO asset, and a failed release or Worker build cannot replace the
-last working deployment. Cloudflare's normal push-triggered build will fail the
-same gate before a matching release exists; the post-release hook starts the
-build that can pass it.
+existing ISO asset. A failed ISO build does not trigger deployment, and a failed
+Worker build leaves the existing deployment active. Cloudflare's normal
+push-triggered builds can deploy website changes using the existing published
+ISO; the post-release hook updates the site after a new ISO is published.
 
 Configure the Cloudflare project with `site` as its root directory. Set the
 build command to `pnpm build` and the deploy command to `pnpm exec wrangler deploy`.
@@ -101,8 +107,11 @@ Run the unit tests with:
 pnpm test
 ```
 
-On a tagged release commit, run the complete production check with:
+Run the complete production check (requires access to GitHub's release API) with:
 
 ```sh
 pnpm build
 ```
+
+Use `pnpm preview` to build and test the page and ISO proxy together in the local
+Cloudflare runtime. Downloads use the published ISO, which can be large.

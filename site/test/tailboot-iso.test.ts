@@ -79,6 +79,7 @@ test("patches across arbitrary chunk boundaries without changing ISO size", asyn
 
   await patchTailbootIso({
     source: new ChunkedBlob(input, [1, 7, 31, 2]),
+    expectedSize: input.byteLength,
     accessKey: "tskey-auth-test-key",
     destination: output.stream,
     onProgress: (inputBytes) => progress.push(inputBytes),
@@ -97,10 +98,47 @@ test("rejects images without exactly one empty slot", async () => {
     await assert.rejects(
       patchTailbootIso({
         source: new Blob([contents]),
+        expectedSize: encode(contents).byteLength,
         accessKey: "tskey-auth-test-key",
         destination: output.stream,
       }),
       /slot/,
     );
   }
+});
+
+test("aborts the destination when a download is truncated or oversized, even with a valid slot", async () => {
+  const input = encode(AUTH_KEY_PLACEHOLDER + "ISO contents");
+  for (const expectedSize of [input.byteLength - 1, input.byteLength + 1]) {
+    let aborted = false;
+    let closed = false;
+    await assert.rejects(patchTailbootIso({
+      source: chunkedStream(input, [17]),
+      expectedSize,
+      accessKey: "tskey-auth-test-key",
+      destination: new WritableStream({
+        abort() { aborted = true; },
+        close() { closed = true; },
+      }),
+    }), /size|incomplete/);
+    assert.equal(aborted, true);
+    assert.equal(closed, false);
+  }
+});
+
+test("aborts the destination on a mid-download network failure", async () => {
+  let aborted = false;
+  let pulls = 0;
+  await assert.rejects(patchTailbootIso({
+    source: new ReadableStream({
+      pull(controller) {
+        if (pulls++ === 0) controller.enqueue(encode(AUTH_KEY_PLACEHOLDER));
+        else controller.error(new Error("connection lost"));
+      },
+    }),
+    expectedSize: 1024,
+    accessKey: "tskey-auth-test-key",
+    destination: new WritableStream({ abort() { aborted = true; } }),
+  }), /connection lost/);
+  assert.equal(aborted, true);
 });

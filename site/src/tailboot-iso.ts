@@ -19,6 +19,7 @@ const placeholderBytes = encoder.encode(AUTH_KEY_PLACEHOLDER);
 
 type PatchOptions = {
   source: Blob | ReadableStream<Uint8Array>;
+  expectedSize: number;
   accessKey: string;
   destination: WritableStream<Uint8Array>;
   onProgress?: (inputBytes: number) => void;
@@ -49,7 +50,7 @@ function indexOfBytes(
   return -1;
 }
 
-function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) {
+function isoPatcher({ accessKey, expectedSize, onProgress }: PatchOptions) {
   const replacementBytes = encoder.encode(
     accessKey.padEnd(AUTH_KEY_CAPACITY, " ") + "\n",
   );
@@ -61,6 +62,9 @@ function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) 
   return new TransformStream<Uint8Array, Uint8Array>({
     transform(bytes, controller) {
       inputBytes += bytes.byteLength;
+      if (inputBytes > expectedSize) {
+        throw new Error("The ISO download exceeds the expected size.");
+      }
       let buffer = concatBytes(pending, bytes);
       let emittedThrough = 0;
       let matchAt = indexOfBytes(buffer, placeholderBytes);
@@ -84,7 +88,9 @@ function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) 
     },
 
     flush(controller) {
-      if (pending.byteLength > 0) controller.enqueue(pending);
+      if (inputBytes !== expectedSize) {
+        throw new Error("The ISO download is incomplete. Please try again.");
+      }
       if (matches === 0) {
         throw new Error(
           "This is not a customizable Tailboot ISO: the auth-key slot was not found.",
@@ -95,6 +101,7 @@ function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) 
           `The ISO contains ${matches} auth-key slots; expected exactly one.`,
         );
       }
+      if (pending.byteLength > 0) controller.enqueue(pending);
     },
   });
 }
@@ -106,14 +113,10 @@ function isoPatcher(accessKey: string, onProgress?: PatchOptions["onProgress"]) 
  * directly to disk. Other browsers can provide an in-memory destination and
  * download the resulting Blob.
  */
-export async function patchTailbootIso({
-  source,
-  accessKey,
-  destination,
-  onProgress,
-}: PatchOptions) {
+export async function patchTailbootIso(options: PatchOptions) {
+  const { source, destination } = options;
   const stream = source instanceof Blob ? source.stream() : source;
   await stream
-    .pipeThrough(isoPatcher(accessKey, onProgress))
+    .pipeThrough(isoPatcher(options))
     .pipeTo(destination);
 }

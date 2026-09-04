@@ -4,7 +4,7 @@ import { release } from "../release.ts";
 
 export const prerender = true;
 
-const isoUrl = release.upstreamUrl ? "/tailboot.iso" : "";
+const isoUrl = release ? `/${release.isoName}` : "";
 ---
 
 <!doctype html>
@@ -30,21 +30,22 @@ const isoUrl = release.upstreamUrl ? "/tailboot.iso" : "";
       <form
         id="customizer"
         data-iso-url={isoUrl}
-        data-iso-name={release.isoName}
+        data-iso-name={release?.isoName}
+        data-iso-size={release?.size}
       >
         <label for="auth-key">Tailscale auth key</label>
         <input
           id="auth-key"
-          name="auth-key"
           type="password"
           autocomplete="off"
           spellcheck="false"
           placeholder="tskey-auth-…"
         />
-        <button type="submit" disabled={!isoUrl}>Create ISO</button>
+        <button type="submit" disabled>Create ISO</button>
+        <noscript>Enable JavaScript to customize an ISO in your browser.</noscript>
         <progress id="progress" hidden></progress>
         <p id="status" role="status" aria-live="polite">
-          {isoUrl
+          {release
             ? `Base image: ${release.tag}`
             : "No release image configured."}
         </p>
@@ -77,14 +78,20 @@ const isoUrl = release.upstreamUrl ? "/tailboot.iso" : "";
       const pickFile = (window as Window & { showSaveFilePicker?: SaveFilePicker })
         .showSaveFilePicker;
 
+      button.disabled = !form.dataset.isoUrl;
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const isoUrl = form.dataset.isoUrl;
-        if (!isoUrl) return;
+        if (!isoUrl || button.disabled) return;
+        const accessKey = keyInput.value;
+        const expectedSize = Number(form.dataset.isoSize);
 
         button.disabled = true;
         progress.hidden = false;
-        progress.removeAttribute("value");
+        progress.max = expectedSize;
+        progress.value = 0;
+        const download = new AbortController();
 
         try {
           const fileName = (form.dataset.isoName ?? "tailboot.iso").replace(
@@ -106,15 +113,11 @@ const isoUrl = release.upstreamUrl ? "/tailboot.iso" : "";
           status.textContent = handle
             ? "Downloading and customizing…"
             : "Downloading and customizing in memory… Keep this tab open.";
-          const source = await fetch(isoUrl);
-          if (!source.ok || !source.body) {
-            throw new Error(`ISO download failed with HTTP ${source.status}.`);
-          }
-
-          const totalBytes = Number(source.headers.get("Content-Length"));
-          if (Number.isFinite(totalBytes) && totalBytes > 0) {
-            progress.max = totalBytes;
-            progress.value = 0;
+          const source = await fetch(isoUrl, { signal: download.signal });
+          if (source.status !== 200 || !source.body) {
+            throw new Error(source.status === 404
+              ? "A new release is available. Reload the page and try again."
+              : `ISO download failed with HTTP ${source.status}.`);
           }
 
           const chunks: ArrayBuffer[] = [];
@@ -129,7 +132,8 @@ const isoUrl = release.upstreamUrl ? "/tailboot.iso" : "";
               });
           await patchTailbootIso({
             source: source.body,
-            accessKey: keyInput.value,
+            expectedSize,
+            accessKey,
             destination,
             onProgress: (inputBytes) => (progress.value = inputBytes),
           });
@@ -159,6 +163,7 @@ const isoUrl = release.upstreamUrl ? "/tailboot.iso" : "";
               ? error.message
               : "Could not create the ISO.";
         } finally {
+          download.abort();
           button.disabled = false;
         }
       });
