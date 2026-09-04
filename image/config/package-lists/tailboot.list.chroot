@@ -6,3 +6,5 @@ firmware-realtek
 network-manager
 sudo
 tailscale
+# Required to create the live user when APT recommends are disabled.
+user-setup
