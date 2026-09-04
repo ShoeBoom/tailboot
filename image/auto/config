@@ -2,6 +2,7 @@
 
 set -eu
 
+# HTTPS archives are accessed before config/package-lists packages are installed.
 lb config noauto \
   --mode debian \
   --distribution trixie \
@@ -9,7 +10,7 @@ lb config noauto \
   --archive-areas "main non-free-firmware" \
   --apt-recommends false \
   --apt-source-archives false \
-  --debootstrap-options "--variant=minbase" \
+  --debootstrap-options "--variant=minbase --include=ca-certificates" \
   --binary-image iso-hybrid \
   --bootloaders "syslinux grub-efi" \
   --bootappend-live "boot=live components hostname=tailboot username=tailboot" \
