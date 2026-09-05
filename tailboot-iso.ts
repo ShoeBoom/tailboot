@@ -1,8 +1,8 @@
 /**
  * Browser-side Tailboot ISO customizer.
  *
- * The base ISO must contain CONFIG_PLACEHOLDER exactly once in an
- * uncompressed file at /TAILBOOT.JSON in the ISO9660 root.
+ * The base ISO must contain CONFIG_PLACEHOLDER in an uncompressed file
+ * at /TAILBOOT.JSON.
  * Keep it outside the live system's SquashFS: changing compressed data
  * in place would corrupt the filesystem.
  */
@@ -28,45 +28,24 @@ export type TailbootConfig = {
 type PatchOptions = {
   source: Blob | ReadableStream<Uint8Array>;
   config: TailbootConfig;
+  configOffset: number;
   destination: WritableStream<Uint8Array>;
   onProgress?: (inputBytes: number) => void;
 };
 
-function concatBytes(left: Uint8Array, right: Uint8Array) {
-  if (left.byteLength === 0) return right;
-  const joined = new Uint8Array(left.byteLength + right.byteLength);
-  joined.set(left);
-  joined.set(right, left.byteLength);
-  return joined;
-}
-
-function indexOfBytes(
-  haystack: Uint8Array,
-  needle: Uint8Array,
-  fromIndex = 0,
-) {
-  const lastStart = haystack.byteLength - needle.byteLength;
-
-  outer: for (let index = fromIndex; index <= lastStart; index += 1) {
-    for (let offset = 0; offset < needle.byteLength; offset += 1) {
-      if (haystack[index + offset] !== needle[offset]) continue outer;
-    }
-    return index;
-  }
-
-  return -1;
-}
-
-function isoPatcher({ config, onProgress }: PatchOptions) {
+function isoPatcher({ config, configOffset, onProgress }: PatchOptions) {
   const configBytes = encoder.encode(JSON.stringify(config));
   const replacementBytes = new Uint8Array(placeholderBytes.byteLength).fill(32);
-  const overlapSize = placeholderBytes.byteLength - 1;
-  let pending = new Uint8Array();
+  const configEnd = configOffset + placeholderBytes.byteLength;
   let inputBytes = 0;
-  let matches = 0;
 
   return new TransformStream<Uint8Array, Uint8Array>({
     start(controller) {
+      if (!Number.isSafeInteger(configOffset) || configOffset < 0 ||
+          !Number.isSafeInteger(configEnd)) {
+        controller.error(new Error("The ISO configuration slot offset is invalid."));
+        return;
+      }
       if (configBytes.byteLength > CONFIG_CAPACITY) {
         controller.error(new Error(
           `Configuration exceeds the ${CONFIG_CAPACITY}-byte ISO slot.`,
@@ -78,41 +57,37 @@ function isoPatcher({ config, onProgress }: PatchOptions) {
     },
 
     transform(bytes, controller) {
+      const chunkStart = inputBytes;
       inputBytes += bytes.byteLength;
-      let buffer = concatBytes(pending, bytes);
-      let emittedThrough = 0;
-      let matchAt = indexOfBytes(buffer, placeholderBytes);
+      const start = Math.max(configOffset, chunkStart);
+      const end = Math.min(configEnd, inputBytes);
 
-      while (matchAt !== -1) {
-        if (matchAt > emittedThrough) {
-          controller.enqueue(buffer.subarray(emittedThrough, matchAt));
+      if (start < end) {
+        for (let offset = start; offset < end; offset += 1) {
+          if (bytes[offset - chunkStart] !== placeholderBytes[offset - configOffset]) {
+            throw new Error(
+              "This is not a compatible Tailboot ISO: the configuration slot does not match the release offset.",
+            );
+          }
         }
-        controller.enqueue(replacementBytes.slice());
-        matches += 1;
-        emittedThrough = matchAt + placeholderBytes.byteLength;
-        matchAt = indexOfBytes(buffer, placeholderBytes, emittedThrough);
+        if (start > chunkStart) {
+          controller.enqueue(bytes.subarray(0, start - chunkStart));
+        }
+        controller.enqueue(replacementBytes.subarray(start - configOffset, end - configOffset));
+        if (end < inputBytes) {
+          controller.enqueue(bytes.subarray(end - chunkStart));
+        }
+      } else {
+        controller.enqueue(bytes);
       }
-
-      buffer = buffer.subarray(emittedThrough);
-      const emitLength = Math.max(0, buffer.byteLength - overlapSize);
-      if (emitLength > 0) controller.enqueue(buffer.subarray(0, emitLength));
-      pending = buffer.slice(emitLength);
 
       onProgress?.(inputBytes);
     },
 
-    flush(controller) {
-      if (matches === 0) {
-        throw new Error(
-          "This is not a compatible Tailboot ISO: the JSON configuration slot was not found.",
-        );
+    flush() {
+      if (inputBytes < configEnd) {
+        throw new Error("The ISO ended before the complete configuration slot was received.");
       }
-      if (matches !== 1) {
-        throw new Error(
-          `The ISO contains ${matches} configuration slots; expected exactly one.`,
-        );
-      }
-      if (pending.byteLength > 0) controller.enqueue(pending);
     },
   });
 }

@@ -11,6 +11,7 @@
   },
   "include": [
     "tailboot-iso.ts",
-    "tailboot-iso.test.ts"
+    "tailboot-iso.test.ts",
+    "image/scripts/test-iso-patch.ts"
   ]
 }

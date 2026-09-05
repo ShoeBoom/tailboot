@@ -1,10 +1,14 @@
 ---
+import { z } from "zod";
 import "../styles/global.css";
 
 const description = "Create a Tailboot live ISO with Tailscale SSH enabled.";
 const socialImageUrl = new URL("/social.png", Astro.site).href;
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
 const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "";
+const configOffset = release
+  ? z.coerce.number().int().nonnegative().parse(import.meta.env.PUBLIC_TAILBOOT_CONFIG_OFFSET)
+  : undefined;
 const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
 ---
 
@@ -84,6 +88,7 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
             class="grid gap-[0.6rem]"
             data-iso-url={isoUrl}
             data-iso-name={isoName}
+            data-config-offset={configOffset}
           >
             <label class="font-semibold" for="auth-key">Auth key</label>
             <input
@@ -165,8 +170,9 @@ sudo -i</code></pre>
         <p class="mb-[0.85rem]">
           The base ISO has a file <code>/TAILBOOT.JSON</code> with a
           reserved 4096-byte placeholder. Your browser reads the ISO as a
-          stream, finds the placeholder, and replaces it with your settings
-          as JSON. The JSON is padded with spaces to the same size. Nothing
+          stream and replaces the placeholder at the byte offset recorded
+          during the release build with your settings as JSON. The JSON is
+          padded with spaces to the same size. Nothing
           else in the ISO moves. The file is outside the compressed live
           system, so the replacement does not damage the filesystem. See
           <a href="https://github.com/ShoeBoom/tailboot/blob/main/tailboot-iso.ts" rel="noreferrer"><code>tailboot-iso.ts</code></a>.
@@ -297,6 +303,7 @@ sudo -i</code></pre>
               });
           await patchTailbootIso({
             source: source.body,
+            configOffset: Number(customizer.dataset.configOffset),
             config,
             destination,
             onProgress: (inputBytes) => {
