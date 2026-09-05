@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-line: #ddd;
+  --color-muted: #555;
+  --font-sans: system-ui, sans-serif;
+}
+
+@layer base {
+  a {
+    color: #00e;
+    text-decoration: underline;
+  }
+
+  a:visited {
+    color: #551a8b;
+  }
+
+  input,
+  button {
+    border-width: 1px;
+    border-color: #767676;
+    background-color: #fff;
+  }
+
+  button {
+    background-color: #efefef;
+  }
+}
+
+@layer components {
+  .spec th {
+    @apply w-32 border-b border-line py-[0.3rem] pr-4 text-left align-top font-normal text-muted;
+  }
+
+  .spec td {
+    @apply border-b border-line py-[0.3rem] text-left align-top;
+  }
+}
