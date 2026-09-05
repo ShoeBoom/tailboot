@@ -1,4 +1,5 @@
 ---
+import "../styles/global.css";
 import iconUrl from "../../icon.svg?url";
 import logoUrl from "../../logo.svg?url";
 
@@ -30,30 +31,30 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
     <link rel="icon" href={iconUrl} type="image/svg+xml" />
     <title>Tailboot</title>
   </head>
-  <body>
-    <header>
-      <img src={logoUrl} alt="Tailboot" width="1238" height="409" />
-      <div class="header-links">
+  <body class="m-0 font-sans text-[15px]/[1.5]">
+    <header class="mx-auto flex w-[min(100%-2.5rem,62rem)] flex-wrap items-center justify-between gap-4 border-b border-line py-5">
+      <img class="block h-7 w-auto" src={logoUrl} alt="Tailboot" width="1238" height="409" />
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
         <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">GitHub</a>
         <span>Made with ❤️ by <a href="https://x.com/Shoeboom" rel="noreferrer" aria-label="@Shoeboom on X">@Shoeboom</a></span>
       </div>
     </header>
 
-    <main>
-      <p class="intro">
+    <main class="mx-auto w-[min(100%-2.5rem,62rem)] pt-8 pb-16">
+      <p class="mb-10 max-w-[44rem]">
         Tailboot is a Debian live image that boots headless, joins your
         tailnet with an embedded auth key, and enables Tailscale SSH. It
         installs nothing else; add what you need over SSH.
       </p>
 
-      <div class="layout">
-        <section aria-labelledby="key-heading">
-          <h2 id="key-heading">1. Create an auth key</h2>
-          <p>
+      <div class="grid gap-10 min-[56rem]:grid-cols-[minmax(0,1fr)_20rem] min-[56rem]:items-start min-[56rem]:gap-x-16">
+        <section class="max-w-[40rem]" aria-labelledby="key-heading">
+          <h2 id="key-heading" class="mb-[0.6rem] text-[1.05rem] font-bold">1. Create an auth key</h2>
+          <p class="mb-[0.85rem]">
             In <a href="https://console.tailscale.com/admin/settings/keys" rel="noreferrer">Settings → Keys</a>,
             choose <strong>Generate auth key</strong>:
           </p>
-          <table>
+          <table class="spec mb-[0.85rem] border-collapse">
             <tbody>
               <tr><th scope="row">Description</th><td><code>tailboot</code> (optional)</td></tr>
               <tr><th scope="row">Reusable</th><td>On</td></tr>
@@ -63,7 +64,7 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
               <tr><th scope="row">Tags</th><td>An isolated tag such as <code>tag:isolated</code></td></tr>
             </tbody>
           </table>
-          <p>
+          <p class="mb-[0.85rem]">
             Tagging is recommended. Define the tag in
             <a href="https://console.tailscale.com/admin/acls" rel="noreferrer">Access Controls</a>
             and write your policy so tagged machines cannot reach other
@@ -71,22 +72,24 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
             tag alone restricts nothing; broad allow rules must exclude it.
             See <a href="https://tailscale.com/kb/1245/set-up-servers" rel="noreferrer">Set up servers</a>.
           </p>
-          <p>
+          <p class="mb-[0.85rem] last:mb-0">
             Each boot registers a new ephemeral device. When the key
             expires, generate another and build a new ISO.
           </p>
         </section>
 
-        <section class="panel" aria-labelledby="create-heading">
-          <h2 id="create-heading">2. Create the ISO</h2>
+        <section class="max-w-[40rem] border border-line p-5 min-[56rem]:sticky min-[56rem]:top-5 min-[56rem]:col-start-2 min-[56rem]:row-span-3 min-[56rem]:row-start-1" aria-labelledby="create-heading">
+          <h2 id="create-heading" class="mb-[0.6rem] text-[1.05rem] font-bold">2. Create the ISO</h2>
           <!-- Keep credentials outside a form so native submission is impossible. -->
           <div
             id="customizer"
+            class="grid gap-[0.6rem]"
             data-iso-url={isoUrl}
             data-iso-name={isoName}
           >
-            <label for="auth-key">Auth key</label>
+            <label class="font-semibold" for="auth-key">Auth key</label>
             <input
+              class="min-h-10 px-3 py-2"
               id="auth-key"
               type="password"
               autocomplete="off"
@@ -94,34 +97,34 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
               placeholder="tskey-auth-…"
             />
             <details>
-              <summary>Wi-Fi (optional)</summary>
-              <div class="wifi-fields">
-                <label for="wifi-ssid">Network name (SSID)</label>
-                <input id="wifi-ssid" type="text" autocomplete="off" spellcheck="false" />
-                <label for="wifi-password">Wi-Fi password</label>
-                <input id="wifi-password" type="password" autocomplete="off" />
-                <p class="fine">WPA2/WPA3 Personal. Ethernet takes priority; Wi-Fi is the fallback. Leave the network name empty to use Ethernet only.</p>
+              <summary class="cursor-pointer">Wi-Fi (optional)</summary>
+              <div class="mt-[0.6rem] grid gap-[0.6rem]">
+                <label class="font-semibold" for="wifi-ssid">Network name (SSID)</label>
+                <input class="min-h-10 px-3 py-2" id="wifi-ssid" type="text" autocomplete="off" spellcheck="false" />
+                <label class="font-semibold" for="wifi-password">Wi-Fi password</label>
+                <input class="min-h-10 px-3 py-2" id="wifi-password" type="password" autocomplete="off" />
+                <p class="m-0 border-0 p-0 text-[0.9rem] text-muted">WPA2/WPA3 Personal. Ethernet takes priority; Wi-Fi is the fallback. Leave the network name empty to use Ethernet only.</p>
               </div>
             </details>
-            <button type="button" disabled>Create ISO</button>
+            <button class="min-h-10 px-3 py-2 disabled:cursor-not-allowed" type="button" disabled>Create ISO</button>
             <noscript>Enable JavaScript to customize an ISO in your browser.</noscript>
-            <progress id="progress" hidden></progress>
-            <p id="status" role="status" aria-live="polite">
+            <progress class="w-full" id="progress" hidden></progress>
+            <p class="m-0 text-[0.9rem] text-muted" id="status" role="status" aria-live="polite">
               {isoUrl
                 ? `Base image: ${release}`
                 : "No release image configured."}
             </p>
           </div>
-          <p class="fine">
+          <p class="mt-4 border-t border-line pt-4 text-[0.9rem] text-muted">
             Credentials are written into the ISO in your browser and are not
             uploaded. The resulting image contains them in plain text; keep
             it private.
           </p>
         </section>
 
-        <section aria-labelledby="boot-heading">
-          <h2 id="boot-heading">3. Flash and boot</h2>
-          <p>
+        <section class="max-w-[40rem]" aria-labelledby="boot-heading">
+          <h2 id="boot-heading" class="mb-[0.6rem] text-[1.05rem] font-bold">3. Flash and boot</h2>
+          <p class="mb-[0.85rem] last:mb-0">
             Write the ISO to a USB drive with <code>dd</code>, Etcher, or
             similar and boot from it on a machine with Ethernet or the Wi-Fi
             network you configured. No display or keyboard is needed. The
@@ -130,18 +133,18 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
           </p>
         </section>
 
-        <section aria-labelledby="ssh-heading">
-          <h2 id="ssh-heading">4. Connect</h2>
-          <pre><code>ssh tailboot@tailboot
+        <section class="max-w-[40rem]" aria-labelledby="ssh-heading">
+          <h2 id="ssh-heading" class="mb-[0.6rem] text-[1.05rem] font-bold">4. Connect</h2>
+          <pre class="mb-[0.85rem] overflow-x-auto border border-line px-4 py-3"><code>ssh tailboot@tailboot
 sudo -i</code></pre>
-          <p>
+          <p class="mb-[0.85rem]">
             Tailscale authenticates the session; there is no password. Your
             policy must allow port 22 to the machine and include an SSH rule
             for the <code>tailboot</code> user. <code>autogroup:nonroot</code>
             covers it; <code>root</code> is not included. See
             <a href="https://tailscale.com/kb/1193/tailscale-ssh" rel="noreferrer">Tailscale SSH</a>.
           </p>
-          <p>
+          <p class="mb-[0.85rem] last:mb-0">
             The local console logs in as <code>tailboot</code> automatically.
             If it prompts, the password is <code>live</code>. The account has
             passwordless sudo.
@@ -149,19 +152,19 @@ sudo -i</code></pre>
         </section>
       </div>
 
-      <section class="faq" aria-labelledby="faq-heading">
-        <h2 id="faq-heading">FAQ</h2>
+      <section class="mt-12 max-w-[40rem] border-t border-line pt-8" aria-labelledby="faq-heading">
+        <h2 id="faq-heading" class="mb-4 text-[1.75rem] font-bold">FAQ</h2>
 
-        <h3>Does the website send my auth key to a server?</h3>
-        <p>
+        <h3 class="mt-5 mb-[0.4rem] text-base font-bold">Does the website send my auth key to a server?</h3>
+        <p class="mb-[0.85rem]">
           No. The website is a static page on GitHub Pages. It has no
           backend. Your browser downloads the base ISO, writes your key into
           the ISO, and saves the file on your computer. The key does not
           leave your browser.
         </p>
 
-        <h3>How does the browser change the ISO?</h3>
-        <p>
+        <h3 class="mt-5 mb-[0.4rem] text-base font-bold">How does the browser change the ISO?</h3>
+        <p class="mb-[0.85rem]">
           The base ISO has a file <code>/TAILBOOT.JSON</code> with a
           reserved 4096-byte placeholder. Your browser reads the ISO as a
           stream, finds the placeholder, and replaces it with your settings
@@ -171,8 +174,8 @@ sudo -i</code></pre>
           <a href="https://github.com/ShoeBoom/tailboot/blob/main/tailboot-iso.ts" rel="noreferrer"><code>tailboot-iso.ts</code></a>.
         </p>
 
-        <h3>How does the machine use the key?</h3>
-        <p>
+        <h3 class="mt-5 mb-[0.4rem] text-base font-bold">How does the machine use the key?</h3>
+        <p class="mb-[0.85rem]">
           At boot, a service reads <code>/TAILBOOT.JSON</code> from the boot
           medium, extracts the key, and starts Tailscale with SSH enabled.
           The service keeps the key only in memory. Each boot
@@ -180,8 +183,8 @@ sudo -i</code></pre>
           <a href="https://github.com/ShoeBoom/tailboot/tree/main/image/config/includes.chroot" rel="noreferrer">the boot scripts</a>.
         </p>
 
-        <h3>How can I check this?</h3>
-        <p>
+        <h3 class="mt-5 mb-[0.4rem] text-base font-bold">How can I check this?</h3>
+        <p class="mb-[0.85rem]">
           All code is open source at
           <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">github.com/ShoeBoom/tailboot</a>.
           Open the network panel of your browser before you create an ISO.
@@ -190,14 +193,14 @@ sudo -i</code></pre>
           <code>TAILBOOT.JSON</code> to see the data it contains.
         </p>
 
-        <h3>Can I make the ISO without the website?</h3>
-        <p>
+        <h3 class="mt-5 mb-[0.4rem] text-base font-bold">Can I make the ISO without the website?</h3>
+        <p class="mb-[0.85rem]">
           Not yet. A command-line tool is planned in
           <a href="https://github.com/ShoeBoom/tailboot/issues/23" rel="noreferrer">issue #23</a>.
         </p>
 
-        <h3>Why must I restrict the key with a tag?</h3>
-        <p>
+        <h3 class="mt-5 mb-[0.4rem] text-base font-bold">Why must I restrict the key with a tag?</h3>
+        <p class="mb-[0.85rem] last:mb-0">
           The ISO contains the key in plain text. A person who has the USB
           drive can read the key. Restrict the key to an isolated tag so a
           machine that boots the ISO cannot reach other devices in your
@@ -337,193 +340,3 @@ sudo -i</code></pre>
     </script>
   </body>
 </html>
-
-<style>
-  :global(*) {
-    box-sizing: border-box;
-  }
-
-  :global(body) {
-    margin: 0;
-    font: 15px/1.5 system-ui, sans-serif;
-  }
-
-  header,
-  main {
-    width: min(100% - 2.5rem, 62rem);
-    margin-inline: auto;
-  }
-
-  header {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: center;
-    justify-content: space-between;
-    padding-block: 1.25rem;
-    border-bottom: 1px solid #ddd;
-  }
-
-  header img {
-    display: block;
-    width: auto;
-    height: 1.75rem;
-  }
-
-  .header-links {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 1.25rem;
-  }
-
-  main {
-    padding-block: 2rem 4rem;
-  }
-
-  .intro {
-    max-width: 44rem;
-    margin: 0 0 2.5rem;
-  }
-
-  .layout {
-    display: grid;
-    gap: 2.5rem;
-  }
-
-  section {
-    max-width: 40rem;
-  }
-
-  h2 {
-    margin: 0 0 0.6rem;
-    font-size: 1.05rem;
-  }
-
-  h3 {
-    margin: 1.25rem 0 0.4rem;
-    font-size: 1rem;
-  }
-
-  .faq {
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid #ddd;
-  }
-
-  .faq h2 {
-    margin-bottom: 1rem;
-    font-size: 1.75rem;
-  }
-
-  p {
-    margin: 0 0 0.85rem;
-  }
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-
-  pre {
-    margin: 0 0 0.85rem;
-    padding: 0.75rem 1rem;
-    border: 1px solid #ddd;
-    overflow-x: auto;
-  }
-
-  table {
-    margin: 0 0 0.85rem;
-    border-collapse: collapse;
-  }
-
-  th,
-  td {
-    padding: 0.3rem 0;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  th {
-    width: 8rem;
-    padding-right: 1rem;
-    font-weight: normal;
-    color: #555;
-  }
-
-  .fine,
-  #status {
-    color: #555;
-    font-size: 0.9rem;
-  }
-
-  #status {
-    margin: 0;
-  }
-
-  .panel {
-    padding: 1.25rem;
-    border: 1px solid #ddd;
-  }
-
-  .panel .fine {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #ddd;
-  }
-
-  #customizer {
-    display: grid;
-    gap: 0.6rem;
-  }
-
-  summary {
-    cursor: pointer;
-  }
-
-  .wifi-fields {
-    display: grid;
-    gap: 0.6rem;
-    margin-top: 0.6rem;
-  }
-
-  .wifi-fields .fine {
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-
-  label {
-    font-weight: 600;
-  }
-
-  input,
-  button {
-    min-height: 2.5rem;
-    padding: 0.5rem 0.75rem;
-    font: inherit;
-  }
-
-  button:disabled {
-    cursor: not-allowed;
-  }
-
-  progress {
-    width: 100%;
-  }
-
-  @media (min-width: 56rem) {
-    .layout {
-      grid-template-columns: minmax(0, 1fr) 20rem;
-      column-gap: 4rem;
-      align-items: start;
-    }
-
-    .panel {
-      grid-column: 2;
-      grid-row: 1 / span 3;
-      position: sticky;
-      top: 1.25rem;
-    }
-  }
-</style>

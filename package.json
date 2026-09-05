@@ -10,7 +10,9 @@
     "test": "node --test tailboot-iso.test.ts"
   },
   "dependencies": {
-    "astro": "^7.2.9"
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.2.9",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
