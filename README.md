@@ -146,9 +146,9 @@ Tailboot uses the [MIT License](LICENSE).
 Use these commands to start the website on your computer:
 
 ```sh
-pnpm install
-pnpm test
-pnpm dev
+yarn install
+yarn test
+yarn dev
 ```
 
 Use a Debian 13 computer to build the ISO. Install `live-build` and `curl`.

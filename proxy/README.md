@@ -29,19 +29,19 @@ CORS limits browser access, not non-browser clients that can spoof `Origin`.
 From this directory:
 
 ```sh
-pnpm install
-pnpm types    # Regenerate after configuration changes.
-pnpm deploy   # Runs checks and tests before deploying.
+yarn install
+yarn types    # Regenerate after configuration changes.
+yarn deploy   # Runs checks and tests before deploying.
 ```
 
-If needed, authenticate with `pnpm exec wrangler login` first. The website uses
+If needed, authenticate with `yarn wrangler login` first. The website uses
 `https://proxy.tailboot.download/<release-tag>` directly; no GitHub Actions
 variable is needed for the proxy URL.
 
 ## Local development
 
 ```sh
-pnpm dev --port 8787 --var ALLOWED_ORIGIN:http://localhost:4321
+yarn dev --port 8787 --var ALLOWED_ORIGIN:http://localhost:4321
 ```
 
 Check a published release locally without downloading the ISO:
@@ -51,5 +51,5 @@ curl --head -H 'Origin: http://localhost:4321' \
   http://localhost:8787/v2026.09.04.153117
 ```
 
-Run `pnpm check` here for type checks and unit tests. Tests use fake upstream
+Run `yarn check` here for type checks and unit tests. Tests use fake upstream
 responses and do not download release assets.

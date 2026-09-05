@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, sans-serif;
+  --color-line: #ddd;
+  --color-muted: #555;
+}
+
+@layer base {
+  html {
+    font-size: 15px;
+  }
+
+  a {
+    color: LinkText;
+    text-decoration: underline;
+  }
+}

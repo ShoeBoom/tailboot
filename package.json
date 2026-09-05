@@ -2,15 +2,20 @@
   "name": "tailboot",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.20.0",
+  "packageManager": "yarn@4.18.0",
+  "workspaces": [
+    "proxy"
+  ],
   "scripts": {
     "dev": "astro dev",
-    "build": "pnpm test && astro check && astro build",
+    "build": "yarn test && astro check && astro build",
     "preview": "astro preview",
     "test": "node --test tailboot-iso.test.ts"
   },
   "dependencies": {
-    "astro": "^7.2.9"
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.2.9",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
