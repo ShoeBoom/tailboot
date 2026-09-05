@@ -3,7 +3,7 @@
 set -eu
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Run this script as root (for example: sudo ./scripts/build-iso.sh)." >&2
+  echo "Run this script as root (for example: sudo ./image/scripts/build-iso.sh)." >&2
   exit 1
 fi
 
@@ -23,8 +23,7 @@ case "${output_name}" in
 esac
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-repository_dir=$(dirname -- "${script_dir}")
-image_dir="${repository_dir}/image"
+image_dir=$(dirname -- "${script_dir}")
 
 cd "${image_dir}"
 lb clean --purge
@@ -39,6 +38,6 @@ curl --fail --silent --show-error --location \
 lb config
 lb build
 
-mkdir -p "${repository_dir}/dist"
+mkdir -p "${image_dir}/dist"
 install -m 0644 live-image-amd64.hybrid.iso \
-  "${repository_dir}/dist/${output_name}"
+  "${image_dir}/dist/${output_name}"

@@ -1,9 +1,16 @@
 {
-  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "strict": true,
+    "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["proxy", "dist", "node_modules"]
+  "include": [
+    "tailboot-iso.ts",
+    "tailboot-iso.test.ts"
+  ]
 }

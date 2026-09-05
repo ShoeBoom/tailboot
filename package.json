@@ -4,18 +4,12 @@
   "type": "module",
   "packageManager": "pnpm@11.20.0",
   "scripts": {
-    "dev": "astro dev",
-    "build": "pnpm test && astro check && astro build",
-    "preview": "astro preview",
+    "dev": "pnpm --filter @tailboot/site dev",
+    "build": "pnpm test && tsc --noEmit && pnpm --filter @tailboot/site build",
+    "preview": "pnpm --filter @tailboot/site preview",
     "test": "node --test tailboot-iso.test.ts"
   },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.2.9",
-    "tailwindcss": "^4.3.3"
-  },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
     "@types/node": "^26.4.0",
     "typescript": "^6.0.3"
   }

@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="logo.svg" alt="Tailboot" width="420">
+  <img src="site/public/logo.svg" alt="Tailboot" width="420">
 </h1>
 
 <p align="center">
@@ -155,7 +155,18 @@ Use a Debian 13 computer to build the ISO. Install `live-build` and `curl`.
 Then, run this command:
 
 ```sh
-sudo ./scripts/build-iso.sh tailboot-local-amd64.iso
+sudo ./image/scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
-The script writes the ISO to `dist/`.
+The script writes the ISO to `image/dist/`.
+
+### Repository layout
+
+- `site/`: Astro website. Its build output is `site/dist/`.
+- `image/`: Debian live-build configuration, build and verification scripts.
+- `proxy/`: Standalone Cloudflare release proxy.
+- `tailboot-iso.ts`: Shared ISO customizer, currently used by the browser.
+- `.github/workflows/`: Release and website deployment orchestration.
+
+Run website commands from the repository root. `pnpm build` tests and type-checks
+the shared customizer before checking and building the site.

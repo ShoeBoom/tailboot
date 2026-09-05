@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Run only inside the disposable build chroot, after the ISO has been built:
-# sudo chroot image/chroot /bin/sh < scripts/test-configure.sh
+# sudo chroot image/chroot /bin/sh < image/scripts/test-configure.sh
 set -eu
 
 config=/run/live/medium/TAILBOOT.JSON

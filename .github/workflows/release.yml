@@ -72,17 +72,17 @@ jobs:
       - name: Build ISO
         run: |
           # Keep the directory runner-owned so the checksum step can write to it.
-          mkdir -p dist
-          sudo ./scripts/build-iso.sh "${{ steps.metadata.outputs.iso_name }}"
+          mkdir -p image/dist
+          sudo ./image/scripts/build-iso.sh "${{ steps.metadata.outputs.iso_name }}"
 
       - name: Verify image contents and boot records
-        run: ./scripts/verify-iso.sh "dist/${{ steps.metadata.outputs.iso_name }}"
+        run: ./image/scripts/verify-iso.sh "image/dist/${{ steps.metadata.outputs.iso_name }}"
 
       - name: Verify configuration with Debian's NetworkManager
-        run: sudo chroot image/chroot /bin/sh < scripts/test-configure.sh
+        run: sudo chroot image/chroot /bin/sh < image/scripts/test-configure.sh
 
       - name: Create checksum
-        working-directory: dist
+        working-directory: image/dist
         run: sha256sum "${{ steps.metadata.outputs.iso_name }}" > "${{ steps.metadata.outputs.iso_name }}.sha256"
 
       - name: Publish immutable release assets
@@ -96,14 +96,14 @@ jobs:
           if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             if [ "${CREATE_TAG}" = "true" ]; then
               gh release create "${RELEASE_TAG}" \
-                "dist/${ISO_NAME}" \
-                "dist/${ISO_NAME}.sha256" \
+                "image/dist/${ISO_NAME}" \
+                "image/dist/${ISO_NAME}.sha256" \
                 --target "${RELEASE_COMMIT}" \
                 --title "Tailboot ${RELEASE_TAG}"
             else
               gh release create "${RELEASE_TAG}" \
-                "dist/${ISO_NAME}" \
-                "dist/${ISO_NAME}.sha256" \
+                "image/dist/${ISO_NAME}" \
+                "image/dist/${ISO_NAME}.sha256" \
                 --title "Tailboot ${RELEASE_TAG}" \
                 --verify-tag
             fi
@@ -132,6 +132,9 @@ jobs:
 
       - name: Build Astro site with the release metadata
         uses: withastro/action@e84f40bd8d2caa9e768ec82ad30dd81f0b280853 # v6.1.2
+        with:
+          out-dir: site/dist
+          cache-dir: site/node_modules/.astro
         env:
           PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
           PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
