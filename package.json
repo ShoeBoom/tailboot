@@ -2,13 +2,10 @@
   "name": "tailboot",
   "private": true,
   "type": "module",
-  "packageManager": "yarn@4.18.0",
-  "workspaces": [
-    "proxy"
-  ],
+  "packageManager": "pnpm@11.20.0",
   "scripts": {
     "dev": "astro dev",
-    "build": "yarn test && astro check && astro build",
+    "build": "pnpm test && astro check && astro build",
     "preview": "astro preview",
     "test": "node --test tailboot-iso.test.ts"
   },

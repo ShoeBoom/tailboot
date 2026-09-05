@@ -2,10 +2,11 @@
   "name": "@tailboot/release-proxy",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.20.0",
   "scripts": {
     "dev": "wrangler dev",
-    "check": "yarn types --check && tsc --noEmit && yarn test",
-    "deploy": "yarn check && wrangler deploy",
+    "check": "pnpm types --check && tsc --noEmit && pnpm test",
+    "deploy": "pnpm check && wrangler deploy",
     "test": "node --test test/*.test.ts",
     "types": "wrangler types --include-runtime=false --strict-vars=false"
   },
