@@ -148,6 +148,72 @@ sudo -i</code></pre>
           </p>
         </section>
       </div>
+
+      <section class="faq" aria-labelledby="faq-heading">
+        <h2 id="faq-heading">Questions</h2>
+
+        <h3>Does the website send my auth key to a server?</h3>
+        <p>
+          No. The website is a static page on GitHub Pages. It has no
+          backend. Your browser downloads the base ISO, writes your key into
+          the ISO, and saves the file on your computer. The key does not
+          leave your browser.
+        </p>
+
+        <h3>Why does the download come from a proxy?</h3>
+        <p>
+          GitHub Releases does not permit a browser to read a file from a
+          different website. A small
+          <a href="https://github.com/ShoeBoom/tailboot/tree/main/proxy" rel="noreferrer">Cloudflare Worker</a>
+          at <code>proxy.tailboot.download</code> sends the base ISO from
+          GitHub Releases to your browser. The proxy accepts only a release
+          tag. It does not receive your key or any other data from you.
+        </p>
+
+        <h3>How does the browser change the ISO?</h3>
+        <p>
+          The base ISO has a file <code>/TAILBOOT.JSON</code> with a
+          reserved 4096-byte placeholder. Your browser reads the ISO as a
+          stream, finds the placeholder, and replaces it with your settings
+          as JSON. The JSON is padded with spaces to the same size. Nothing
+          else in the ISO moves. The file is outside the compressed live
+          system, so the replacement does not damage the filesystem. See
+          <a href="https://github.com/ShoeBoom/tailboot/blob/main/tailboot-iso.ts" rel="noreferrer"><code>tailboot-iso.ts</code></a>.
+        </p>
+
+        <h3>How does the machine use the key?</h3>
+        <p>
+          At boot, a service reads <code>/TAILBOOT.JSON</code> from the boot
+          medium, extracts the key, and starts Tailscale with SSH enabled.
+          The service keeps the key only in memory. Each boot
+          registers a new ephemeral device. See
+          <a href="https://github.com/ShoeBoom/tailboot/tree/main/image/config/includes.chroot" rel="noreferrer">the boot scripts</a>.
+        </p>
+
+        <h3>How can I check this?</h3>
+        <p>
+          All code is open source at
+          <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">github.com/ShoeBoom/tailboot</a>.
+          Open the network panel of your browser before you create an ISO.
+          You will see one request to the proxy for the base ISO and no
+          request that contains your key. Mount the ISO you made and read
+          <code>TAILBOOT.JSON</code> to see the data it contains.
+        </p>
+
+        <h3>Can I make the ISO without the website?</h3>
+        <p>
+          Not yet. A command-line tool is planned in
+          <a href="https://github.com/ShoeBoom/tailboot/issues/23" rel="noreferrer">issue #23</a>.
+        </p>
+
+        <h3>Why must I restrict the key with a tag?</h3>
+        <p>
+          The ISO contains the key in plain text. A person who has the USB
+          drive can read the key. Restrict the key to an isolated tag so a
+          machine that boots the ISO cannot reach other devices in your
+          tailnet.
+        </p>
+      </section>
     </main>
 
     <script>
@@ -342,6 +408,17 @@ sudo -i</code></pre>
   h2 {
     margin: 0 0 0.6rem;
     font-size: 1.05rem;
+  }
+
+  h3 {
+    margin: 1.25rem 0 0.4rem;
+    font-size: 1rem;
+  }
+
+  .faq {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #ddd;
   }
 
   p {
