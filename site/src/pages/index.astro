@@ -1,14 +1,14 @@
 ---
+import { z } from "zod";
 import "../styles/global.css";
 
 const description = "Create a Tailboot live ISO with Tailscale SSH enabled.";
 const socialImageUrl = new URL("/social.png", Astro.site).href;
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
 const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "";
-const configOffset = Number(import.meta.env.PUBLIC_TAILBOOT_CONFIG_OFFSET);
-if (release && (!Number.isSafeInteger(configOffset) || configOffset < 0)) {
-  throw new Error("A release requires PUBLIC_TAILBOOT_CONFIG_OFFSET from its ISO.");
-}
+const configOffset = release
+  ? z.coerce.number().int().nonnegative().parse(import.meta.env.PUBLIC_TAILBOOT_CONFIG_OFFSET)
+  : undefined;
 const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
 ---
 
