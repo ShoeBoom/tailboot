@@ -159,14 +159,3 @@ sudo ./image/scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
 The script writes the ISO to `image/dist/`.
-
-### Repository layout
-
-- `site/`: Astro website. Its build output is `site/dist/`.
-- `image/`: Debian live-build configuration, build and verification scripts.
-- `proxy/`: Standalone Cloudflare release proxy.
-- `tailboot-iso.ts`: Shared ISO customizer, currently used by the browser.
-- `.github/workflows/`: Release and website deployment orchestration.
-
-Run website commands from the repository root. `pnpm build` tests and type-checks
-the shared customizer before checking and building the site.
