@@ -13,3 +13,4 @@
 - YAGNI: do not add things unless they are needed now.
 - Prefer omission over enforcement. Do not add machinery that removes, disables, or guards against software or behavior that Tailboot does not configure.
 - Automated releases should verify behavior owned by Tailboot. A failed release must not replace the last working release presented to users.
+- The auth key the end users provide, should always be processed client side. Privacy is crucial
