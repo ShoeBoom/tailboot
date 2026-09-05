@@ -2,7 +2,7 @@
  * Browser-side Tailboot ISO customizer.
  *
  * The base ISO must contain CONFIG_PLACEHOLDER in an uncompressed file
- * at /TAILBOOT.JSON. CI supplies its byte offset using xorriso.
+ * at /TAILBOOT.JSON.
  * Keep it outside the live system's SquashFS: changing compressed data
  * in place would corrupt the filesystem.
  */
@@ -63,7 +63,6 @@ function isoPatcher({ config, configOffset, onProgress }: PatchOptions) {
       const end = Math.min(configEnd, inputBytes);
 
       if (start < end) {
-        // Inspect only the slot, including when it spans download chunks.
         for (let offset = start; offset < end; offset += 1) {
           if (bytes[offset - chunkStart] !== placeholderBytes[offset - configOffset]) {
             throw new Error(

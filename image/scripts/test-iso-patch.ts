@@ -1,4 +1,3 @@
-// Run with Node against a built ISO; production code uses only browser APIs.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";

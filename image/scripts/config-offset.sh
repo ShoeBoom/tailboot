@@ -17,7 +17,6 @@ lba=$(printf '%s\n' "${report}" | awk -F , '
   END { if (count != 1) exit 1; print lba }
 ')
 
-# Verify the raw bytes at that position before exposing it to the site build.
 dd if="${iso}" bs=2048 skip="${lba}" count=2 2>/dev/null \
   | cmp - "${script_dir}/../config/includes.binary/TAILBOOT.JSON"
 printf '%s\n' "$((lba * 2048))"
