@@ -60,4 +60,12 @@ xorriso -indev "${iso}" -report_el_torito plain \
 grep -Fq "BIOS" "${work_dir}/boot-report"
 grep -Fq "UEFI" "${work_dir}/boot-report"
 
-echo "Verified Tailboot JSON slot, login and network dependencies, services, and BIOS/UEFI boot records."
+for boot_config in isolinux/isolinux.cfg boot/grub/config.cfg; do
+  xorriso -osirrox on -indev "${iso}" \
+    -extract "/${boot_config}" "${work_dir}/$(basename "${boot_config}")" \
+    >/dev/null 2>&1
+done
+grep -Fxq "timeout 50" "${work_dir}/isolinux.cfg"
+grep -Fxq "set timeout=5" "${work_dir}/config.cfg"
+
+echo "Verified Tailboot JSON slot, login and network dependencies, services, and unattended BIOS/UEFI boot."

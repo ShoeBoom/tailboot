@@ -23,5 +23,6 @@ image/config/common
 image/config/source
 image/config/hooks/live/*
 !image/config/hooks/live/0100-tailboot.hook.chroot
+!image/config/hooks/live/0200-autoboot.hook.binary
 image/config/hooks/normal/
 image/config/package-lists/live.list.chroot

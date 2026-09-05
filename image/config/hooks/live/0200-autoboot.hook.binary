@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -eu
+
+# live-build defaults both boot menus to wait forever. Syslinux measures its
+# timeout in tenths of a second, while GRUB measures it in seconds.
+sed -i 's/^timeout 0$/timeout 50/' isolinux/isolinux.cfg
+sed -i '/^set default=0$/a set timeout=5' boot/grub/config.cfg

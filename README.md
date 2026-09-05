@@ -99,7 +99,9 @@ The result is written to `dist/`. Builds use Tailscale's official Debian
 repository and Debian's `minbase` bootstrap. The image adds only certificates,
 common network firmware, NetworkManager, wpasupplicant, jq, sudo, Tailscale, and `user-setup`
 for the live login account; install other tools with APT after the machine
-connects. Because APT recommends are disabled, `user-setup` must be listed
+connects. The boot menu starts the default live system after five seconds on
+both BIOS and UEFI machines, so no keyboard or display is required. Because APT
+recommends are disabled, `user-setup` must be listed
 explicitly, as must `wpasupplicant` for Wi-Fi. Release verification checks these
 dependencies and the installed configuration script and enabled services.
 It also runs the configuration script in the build chroot with and without
