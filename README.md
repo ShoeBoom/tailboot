@@ -3,44 +3,54 @@
 </h1>
 
 <p align="center">
-  <strong>Boot a computer into Debian and reach it over Tailscale SSH—no installation, display, or keyboard required.</strong>
+  <strong>Use Tailboot to start Debian and connect to a computer with Tailscale SSH.</strong>
 </p>
 
 <p align="center">
-  <a href="https://tailboot.download/"><strong>Create a Tailboot USB →</strong></a>
+  <a href="https://tailboot.download/"><strong>Create a Tailboot USB drive</strong></a>
 </p>
 
-Tailboot is a small, headless Debian 13 live image for bringing a machine onto
-your tailnet. Give it a Tailscale auth key, optionally add Wi-Fi credentials,
-flash it to a USB drive, and boot. The machine connects to Tailscale and enables
-Tailscale SSH automatically.
+Tailboot is a Debian 13 live image for computers that do not have a display.
+It connects the computer to your tailnet. It then starts Tailscale SSH.
 
-It runs entirely as a live system and is not an installer. Remove the USB drive
-and reboot to return to the machine's normal operating system.
+You do not have to install an operating system. You do not need a display or a
+keyboard. Tailboot runs from a USB drive.
 
-## Why Tailboot?
+Tailboot does not install Debian on the computer. To use the usual operating
+system, first shut down Tailboot. Remove the USB drive. Then, start the computer.
 
-Tailboot is useful when you want a remote shell on a physical machine without
-first installing or configuring an operating system. For example:
+## What Tailboot does
 
-- Bring a headless machine online from across the room—or across the internet.
-- Bootstrap a new server before deciding what to install on it.
-- Run a temporary Debian environment without replacing the installed OS.
-- Get secure remote access without exposing SSH to the public internet.
+You can use Tailboot to:
 
-Tailboot deliberately includes only what it needs to boot, connect to a network,
-join Tailscale, and accept SSH connections. Once connected, install any
-additional tools you need with APT.
+- Connect to a computer that does not have a display.
+- Prepare a new server before you install an operating system.
+- Use Debian for a short time. Tailboot does not replace the installed operating
+  system.
+- Make an SSH connection without an open port on the public internet.
 
-## Get started
+Tailboot contains only the software that is necessary to do these tasks:
 
-You need a Tailscale account, a USB drive, and an x86-64 machine that can boot
-from USB.
+- Start the computer.
+- Connect to a network.
+- Join Tailscale.
+- Accept SSH connections.
+
+After you connect, use APT to install other software.
+
+## Prepare to use Tailboot
+
+Make sure that you have these items:
+
+- A Tailscale account
+- A USB drive
+- A computer with an x86-64 processor that can start from a USB drive
 
 ### 1. Create a Tailscale auth key
 
-Open [Settings → Keys](https://console.tailscale.com/admin/settings/keys) in
-the Tailscale admin console and generate a key with these settings:
+In the Tailscale admin console, open
+[Settings > Keys](https://console.tailscale.com/admin/settings/keys). Select
+**Generate auth key**. Use these settings:
 
 | Setting | Value |
 | --- | --- |
@@ -48,78 +58,95 @@ the Tailscale admin console and generate a key with these settings:
 | Expiration | 90 days |
 | Ephemeral | On |
 | Pre-approved | On, if available |
-| Tags | An isolated tag such as `tag:isolated` |
+| Tags | An isolated tag, such as `tag:isolated` |
 
-Using an isolated tag is strongly recommended. Configure your
-[tailnet policy](https://console.tailscale.com/admin/acls) so that Tailboot
-machines cannot reach other devices, while your own devices can reach them over
-Tailscale SSH. A tag does not restrict access by itself; your policy must exclude
-it from broad allow rules.
+Use an isolated tag. Configure your
+[tailnet policy](https://console.tailscale.com/admin/acls). Do not let Tailboot
+machines connect to other devices. Make sure that your devices can connect to
+the Tailboot machines with Tailscale SSH.
 
-### 2. Create your ISO
+A tag does not limit access by itself. Make sure that broad allow rules do not
+apply to the tag.
 
-Go to [tailboot.download](https://tailboot.download/), enter the auth key, and
-optionally add a Wi-Fi network. Tailboot downloads the base image and adds your
-configuration locally in the browser—your credentials are not uploaded.
+### 2. Create the ISO
 
-### 3. Flash and boot
+1. Open [tailboot.download](https://tailboot.download/).
+2. Enter the auth key.
+3. If you want to use Wi-Fi, enter the Wi-Fi network name and password.
+4. Select **Create ISO**.
 
-Write the customized ISO to a USB drive with
-[Etcher](https://etcher.balena.io/), `dd`, or another ISO-writing tool. Insert
-the drive and boot the target machine from it. Tailboot starts automatically on
-both BIOS and UEFI systems; no display or keyboard is needed.
+Your browser downloads the base ISO. It adds your configuration to the ISO in
+your browser. It does not send your credentials to the Tailboot server.
 
-Ethernet is preferred. If it is unavailable, Tailboot connects to the Wi-Fi
-network you supplied.
+### 3. Write the ISO to a USB drive
 
-### 4. Connect
+1. Use [Etcher](https://etcher.balena.io/), `dd`, or an equivalent ISO tool.
+2. Write the customized ISO to a USB drive.
+3. Connect the USB drive to the target computer.
+4. Start the computer from the USB drive.
 
-The machine appears in your tailnet as `tailboot` (or `tailboot-1`,
-`tailboot-2`, and so on if the name is already in use):
+Tailboot starts automatically on BIOS and UEFI systems. You do not need a
+display or a keyboard.
+
+Tailboot uses Ethernet as the primary connection. If Ethernet has no default
+route, Tailboot uses the Wi-Fi network that you added to the ISO.
+
+### 4. Connect with SSH
+
+The computer has the name `tailboot` in your tailnet. If that name is in use,
+Tailscale adds a number. For example, the name can be `tailboot-1`.
+
+Use these commands:
 
 ```sh
 ssh tailboot@tailboot
 sudo -i
 ```
 
-Tailscale authenticates the SSH session, so there is no SSH password. Your
-tailnet policy must allow port 22 and include a Tailscale SSH rule for the
-`tailboot` user. `autogroup:nonroot` includes this user; it does not include
-`root`. See [Tailscale's SSH documentation](https://tailscale.com/kb/1193/tailscale-ssh)
-for policy examples.
+Tailscale authenticates the SSH session. You do not need an SSH password. Your
+tailnet policy must permit traffic on port 22. It must also include a Tailscale
+SSH rule for the `tailboot` user.
 
-## Security and lifecycle
+The `autogroup:nonroot` group includes the `tailboot` user. It does not include
+the `root` user. Refer to the
+[Tailscale SSH documentation](https://tailscale.com/kb/1193/tailscale-ssh) for
+policy examples.
 
-- Your customized ISO contains the Tailscale auth key and any Wi-Fi password in
-  plain text. Treat the ISO and USB drive like a credential and do not share
-  them.
-- Credentials are written into the ISO in your browser and are never sent to
-  Tailboot's server.
-- Every boot creates a new ephemeral Tailscale machine identity. Tailboot does
-  not persist or restore Tailscale state.
-- Auth keys expire after 90 days. When yours expires, create a new key and a new
-  ISO.
-- Each [GitHub release](https://github.com/ShoeBoom/tailboot/releases) includes
-  the unmodified base ISO and its SHA-256 checksum. Customization changes the
-  image, so the published checksum does not apply to a customized ISO.
+## Security
 
-## Scope and limitations
+- The customized ISO contains the Tailscale auth key as plain text. It also
+  contains the Wi-Fi password as plain text if you supply one.
+- Keep the customized ISO and the USB drive in a secure location. Do not give
+  them to other persons.
+- The browser writes the credentials to the ISO. It does not send them to the
+  Tailboot server.
+- Each time Tailboot starts, it creates a new ephemeral Tailscale machine
+  identity. Tailboot does not keep or restore Tailscale state.
+- The auth key expires after 90 days. When the key expires, create a new key and
+  a new ISO.
+- Each [GitHub release](https://github.com/ShoeBoom/tailboot/releases) contains
+  the base ISO and its SHA-256 checksum. The checksum applies only to the base
+  ISO. It does not apply to a customized ISO.
 
-Tailboot is intentionally narrow: it gets a machine online and gives you a
-shell. It is not a general-purpose rescue environment, an OS installer, or a
-persistent workstation.
+## Product limits
 
-- Internet access is required for the machine to join Tailscale.
-- Wi-Fi support is limited to one WPA2/WPA3 Personal network.
-- Changes made to the live system do not persist across boots.
-- Hardware support depends on Debian's included kernel and firmware.
-- The local console logs in automatically as `tailboot`. If prompted, use the
-  password `live`; the account has passwordless sudo.
+Tailboot connects a computer to Tailscale and gives you a shell. It is not a
+general rescue system, an operating system installer, or a persistent
+workstation.
 
-## Developing Tailboot
+- The computer must have an internet connection to join Tailscale.
+- Tailboot supports one WPA2/WPA3 Personal Wi-Fi network.
+- A restart removes changes to the live system.
+- The Debian kernel and firmware control hardware support.
+- Tailboot automatically logs in to the local console as `tailboot`. If a login
+  screen appears, use `tailboot` as the user name and `live` as the password.
+  This account can use `sudo` without a password.
 
-The project is open source under the [MIT License](LICENSE). To run the website
-locally:
+## Development
+
+Tailboot uses the [MIT License](LICENSE).
+
+Use these commands to start the website on your computer:
 
 ```sh
 pnpm install
@@ -127,10 +154,11 @@ pnpm test
 pnpm dev
 ```
 
-To build the ISO on Debian 13 with `live-build` and `curl` installed:
+Use a Debian 13 computer to build the ISO. Install `live-build` and `curl`.
+Then, run this command:
 
 ```sh
 sudo ./scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
-The output is written to `dist/`.
+The script writes the ISO to `dist/`.
