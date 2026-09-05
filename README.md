@@ -1,178 +1,136 @@
-# Tailboot
+<h1 align="center">
+  <img src="logo.svg" alt="Tailboot" width="420">
+</h1>
 
-Tailboot is a headless Debian 13 live image that automatically joins a
-Tailscale network and enables Tailscale SSH. It is intended to be flashed to a
-USB drive and booted directly; it is not an installer.
+<p align="center">
+  <strong>Boot a computer into Debian and reach it over Tailscale SSH—no installation, display, or keyboard required.</strong>
+</p>
 
-## Logging in
+<p align="center">
+  <a href="https://tailboot.download/"><strong>Create a Tailboot USB →</strong></a>
+</p>
 
-Connect with `ssh tailboot@tailboot` (or use the device's Tailscale IP if its
-name differs). Tailscale authenticates the SSH connection; no local password
-is needed. Your tailnet policy must allow both traffic to port 22 and Tailscale
-SSH to the `tailboot` user. `autogroup:nonroot` includes this account, but
-excludes `root`. Use `sudo -i` after connecting for a root shell.
+Tailboot is a small, headless Debian 13 live image for bringing a machine onto
+your tailnet. Give it a Tailscale auth key, optionally add Wi-Fi credentials,
+flash it to a USB drive, and boot. The machine connects to Tailscale and enables
+Tailscale SSH automatically.
 
-The local console logs in automatically as `tailboot`. If prompted for a
-login, the username is `tailboot` and Debian Live's default password is `live`.
-The account has passwordless sudo.
+It runs entirely as a live system and is not an installer. Remove the USB drive
+and reboot to return to the machine's normal operating system.
 
-## How customization works
+## Why Tailboot?
 
-The base ISO contains a fixed-size placeholder in the uncompressed
-`/TAILBOOT.JSON` file. The browser-side TypeScript module replaces that 4096-byte
-record with UTF-8 JSON padded with spaces and a final newline, without changing
-the length of the image. Configurations larger than the slot are rejected.
+Tailboot is useful when you want a remote shell on a physical machine without
+first installing or configuring an operating system. For example:
 
-```json
-{
-  "authKey": "tskey-auth-…",
-  "wifi": {
-    "ssid": "My Wi-Fi",
-    "password": "my-wifi-password"
-  }
-}
+- Bring a headless machine online from across the room—or across the internet.
+- Bootstrap a new server before deciding what to install on it.
+- Run a temporary Debian environment without replacing the installed OS.
+- Get secure remote access without exposing SSH to the public internet.
+
+Tailboot deliberately includes only what it needs to boot, connect to a network,
+join Tailscale, and accept SSH connections. Once connected, install any
+additional tools you need with APT.
+
+## Get started
+
+You need a Tailscale account, a USB drive, and an x86-64 machine that can boot
+from USB.
+
+### 1. Create a Tailscale auth key
+
+Open [Settings → Keys](https://console.tailscale.com/admin/settings/keys) in
+the Tailscale admin console and generate a key with these settings:
+
+| Setting | Value |
+| --- | --- |
+| Reusable | On |
+| Expiration | 90 days |
+| Ephemeral | On |
+| Pre-approved | On, if available |
+| Tags | An isolated tag such as `tag:isolated` |
+
+Using an isolated tag is strongly recommended. Configure your
+[tailnet policy](https://console.tailscale.com/admin/acls) so that Tailboot
+machines cannot reach other devices, while your own devices can reach them over
+Tailscale SSH. A tag does not restrict access by itself; your policy must exclude
+it from broad allow rules.
+
+### 2. Create your ISO
+
+Go to [tailboot.download](https://tailboot.download/), enter the auth key, and
+optionally add a Wi-Fi network. Tailboot downloads the base image and adds your
+configuration locally in the browser—your credentials are not uploaded.
+
+### 3. Flash and boot
+
+Write the customized ISO to a USB drive with
+[Etcher](https://etcher.balena.io/), `dd`, or another ISO-writing tool. Insert
+the drive and boot the target machine from it. Tailboot starts automatically on
+both BIOS and UEFI systems; no display or keyboard is needed.
+
+Ethernet is preferred. If it is unavailable, Tailboot connects to the Wi-Fi
+network you supplied.
+
+### 4. Connect
+
+The machine appears in your tailnet as `tailboot` (or `tailboot-1`,
+`tailboot-2`, and so on if the name is already in use):
+
+```sh
+ssh tailboot@tailboot
+sudo -i
 ```
 
-Omit `wifi` to use Ethernet only. The customizer supports one WPA2/WPA3 Personal
-network. At boot, `tailboot-configure.service` extracts the auth key into a
-root-only file under `/run/tailboot` for `tailscale up --ssh`. If Wi-Fi is
-configured, it uses `nmcli --offline` to create a root-only connection profile
-under `/run/NetworkManager/system-connections` before NetworkManager starts.
-NetworkManager handles connecting and reconnecting. Ethernet is preferred;
-the configured Wi-Fi network is the fallback when Ethernet is disconnected or
-has no default route. Both connections can stay active. We leave route metrics
-at NetworkManager's defaults, which favor Ethernet, without custom switching
-logic. This does not detect an upstream internet outage on an otherwise
-connected Ethernet network.
+Tailscale authenticates the SSH session, so there is no SSH password. Your
+tailnet policy must allow port 22 and include a Tailscale SSH rule for the
+`tailboot` user. `autogroup:nonroot` includes this user; it does not include
+`root`. See [Tailscale's SSH documentation](https://tailscale.com/kb/1193/tailscale-ssh)
+for policy examples.
 
-Wi-Fi profile generation is best-effort,
-with a 10-second timeout (and forced termination one second later if needed);
-failures are logged without blocking auth-key setup or Ethernet startup.
-Tailscale does not wait for Wi-Fi scanning or authentication to finish: its join
-service retries until internet connectivity is available. These files live in
-RAM; Tailscale state is never restored between boots.
+## Security and lifecycle
 
-The site downloads its pinned ISO through the standalone [Cloudflare proxy](proxy/)
-and customizes it locally. The proxy allows browser requests from the configured
-site origin and forwards only Tailboot release ISOs. It needs no redeployment
-when a new ISO is published.
+- Your customized ISO contains the Tailscale auth key and any Wi-Fi password in
+  plain text. Treat the ISO and USB drive like a credential and do not share
+  them.
+- Credentials are written into the ISO in your browser and are never sent to
+  Tailboot's server.
+- Every boot creates a new ephemeral Tailscale machine identity. Tailboot does
+  not persist or restore Tailscale state.
+- Auth keys expire after 90 days. When yours expires, create a new key and a new
+  ISO.
+- Each [GitHub release](https://github.com/ShoeBoom/tailboot/releases) includes
+  the unmodified base ISO and its SHA-256 checksum. Customization changes the
+  image, so the published checksum does not apply to a customized ISO.
 
-Browsers with a file-system writer stream directly to disk. Other browsers hold
-the customized ISO in memory before downloading it. The customizer requires
-exactly one JSON slot before completing the file. Credentials never reach the
-proxy. The JSON customizer requires a newly built base ISO; older images with
-`/TAILBOOT.KEY` are incompatible.
+## Scope and limitations
 
-## Website
+Tailboot is intentionally narrow: it gets a machine online and gives you a
+shell. It is not a general-purpose rescue environment, an OS installer, or a
+persistent workstation.
 
-The website is hosted on GitHub Pages at <https://tailboot.download/>.
+- Internet access is required for the machine to join Tailscale.
+- Wi-Fi support is limited to one WPA2/WPA3 Personal network.
+- Changes made to the live system do not persist across boots.
+- Hardware support depends on Debian's included kernel and firmware.
+- The local console logs in automatically as `tailboot`. If prompted, use the
+  password `live`; the account has passwordless sudo.
 
-The single-page Astro site is in [`src/pages/index.astro`](src/pages/index.astro)
-and the streaming customizer is [`tailboot-iso.ts`](tailboot-iso.ts).
+## Developing Tailboot
+
+The project is open source under the [MIT License](LICENSE). To run the website
+locally:
 
 ```sh
 pnpm install
+pnpm test
 pnpm dev
 ```
 
-For a production build, provide the release metadata:
-
-```sh
-PUBLIC_TAILBOOT_ISO_NAME="tailboot-v2026.09.04.153117-amd64.iso" \
-PUBLIC_TAILBOOT_RELEASE="v2026.09.04.153117" \
-pnpm build
-```
-
-There is deliberately no runtime “latest release” lookup in the website. A
-deployed site always points to the immutable ISO URL baked into that site
-build.
-
-## Building the image
-
-On a Debian 13 build host with `live-build` and `curl` installed:
+To build the ISO on Debian 13 with `live-build` and `curl` installed:
 
 ```sh
 sudo ./scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
-The result is written to `dist/`. Builds use Tailscale's official Debian
-repository and Debian's `minbase` bootstrap. The image adds only certificates,
-common network firmware, NetworkManager, wpasupplicant, jq, sudo, Tailscale, and `user-setup`
-for the live login account; install other tools with APT after the machine
-connects. The boot menu starts the default live system after five seconds on
-both BIOS and UEFI machines, so no keyboard or display is required. Because APT
-recommends are disabled, `user-setup` must be listed
-explicitly, as must `wpasupplicant` for Wi-Fi. Release verification checks these
-dependencies and the installed configuration script and enabled services.
-It also runs the configuration script in the build chroot with and without
-Wi-Fi, checking credential escaping and file permissions using Debian's nmcli.
-Invalid Wi-Fi settings, a failed profile writer, and a stuck profile writer
-must all leave auth-key setup successful without installing a partial profile.
-
-The ISO's internal media-check manifest is disabled because customizing
-`/TAILBOOT.JSON` necessarily changes that file. Every GitHub release includes a
-separate SHA-256 file for verifying the unmodified base ISO.
-
-## Releases and GitHub Pages
-
-[`release.yml`](.github/workflows/release.yml) runs when a CalVer tag is pushed,
-when started manually, and on the first day of each month at 04:17 UTC.
-Scheduled and manual runs create a UTC CalVer tag such as
-`v2026.09.04.031500`; pushed tags must use the same `vYYYY.MM.DD.HHMMSS` format.
-
-1. Build the ISO and publish it plus its SHA-256 checksum to the GitHub release.
-2. Build Astro with that exact release's metadata.
-3. Deploy the static result to GitHub Pages.
-
-Jobs run in that order. The existing Pages deployment remains active if either
-the new ISO or site build fails, so it continues using the previous ISO until a
-new website deployment succeeds. Reruns never overwrite an existing ISO asset.
-The timestamp permits multiple releases on the same day without maintaining a
-version counter.
-
-Domain and deployment setup:
-
-1. Deploy the [proxy](proxy/README.md) with `ALLOWED_ORIGIN` set to
-   `https://tailboot.download`. If using Cloudflare Builds, select `main` as
-   the production branch and deploy the merged commit.
-2. In the repository's **Settings → Pages**, select **GitHub Actions** as the
-   source and save `tailboot.download` as the custom domain.
-3. In Cloudflare DNS, point the apex (`@`) to GitHub Pages using these four
-   **A** records, each with **DNS only** (gray cloud):
-
-   | Name | IPv4 address |
-   | --- | --- |
-   | `@` | `185.199.108.153` |
-   | `@` | `185.199.109.153` |
-   | `@` | `185.199.110.153` |
-   | `@` | `185.199.111.153` |
-
-   Replace conflicting apex address records; leave `proxy.tailboot.download`
-   pointing to the Worker.
-4. Enable **Enforce HTTPS** in GitHub Pages once the certificate is ready.
-5. After merging, run **Build Tailboot release** on `main` to publish the site
-   with root-relative asset paths. Merging alone does not deploy GitHub Pages.
-
-Coordinate the proxy deployment with the domain switch: it accepts only the
-configured website origin. The old GitHub Pages origin is no longer allowed.
-The custom domain is managed in GitHub settings; this Actions deployment does
-not use a `CNAME` file. See GitHub's [custom domain instructions](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
-
-The website downloads from `https://proxy.tailboot.download/<release-tag>`.
-No proxy URL repository variable or Cloudflare deploy hook is needed.
-
-## Credential lifecycle
-
-Use a reusable, ephemeral Tailscale auth key with a 90-day expiry. When it
-expires, generate another key and customize a new ISO. Every boot creates a new
-ephemeral Tailscale machine identity. The customized image contains the auth key
-and any Wi-Fi credentials in plain text, so keep it private.
-
-Run the website checks with the release variables above set:
-
-```sh
-pnpm test
-pnpm build
-```
-
-Check the independent proxy with `pnpm --dir proxy check`.
+The output is written to `dist/`.
