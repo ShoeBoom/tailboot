@@ -7,6 +7,15 @@ settings:
 importers:
 
   .:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.4.0
+        version: 26.4.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  site:
     dependencies:
       '@tailwindcss/vite':
         specifier: ^4.3.3

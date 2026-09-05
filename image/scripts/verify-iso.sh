@@ -4,18 +4,18 @@ set -eu
 
 iso=${1:-}
 if [ -z "${iso}" ] || [ ! -f "${iso}" ]; then
-  echo "Usage: ./scripts/verify-iso.sh path/to/tailboot.iso" >&2
+  echo "Usage: ./image/scripts/verify-iso.sh path/to/tailboot.iso" >&2
   exit 1
 fi
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-repository_dir=$(dirname -- "${script_dir}")
+image_dir=$(dirname -- "${script_dir}")
 work_dir=$(mktemp -d)
 trap 'rm -rf "${work_dir}"' EXIT HUP INT TERM
 
 xorriso -osirrox on -indev "${iso}" \
   -extract /TAILBOOT.JSON "${work_dir}/TAILBOOT.JSON" >/dev/null 2>&1
-cmp "${repository_dir}/image/config/includes.binary/TAILBOOT.JSON" \
+cmp "${image_dir}/config/includes.binary/TAILBOOT.JSON" \
   "${work_dir}/TAILBOOT.JSON"
 
 xorriso -osirrox on -indev "${iso}" \
@@ -42,7 +42,7 @@ unsquashfs -ll "${work_dir}/filesystem.squashfs" \
 for service in tailboot tailboot-configure; do
   unsquashfs -cat "${work_dir}/filesystem.squashfs" \
     "etc/systemd/system/${service}.service" > "${work_dir}/${service}.service"
-  cmp "${repository_dir}/image/config/includes.chroot/etc/systemd/system/${service}.service" \
+  cmp "${image_dir}/config/includes.chroot/etc/systemd/system/${service}.service" \
     "${work_dir}/${service}.service"
   grep -Fq "etc/systemd/system/multi-user.target.wants/${service}.service" \
     "${work_dir}/squashfs-files"
@@ -50,7 +50,7 @@ done
 for script in tailboot-configure tailboot-wifi; do
   unsquashfs -cat "${work_dir}/filesystem.squashfs" \
     "usr/local/sbin/${script}" > "${work_dir}/${script}"
-  cmp "${repository_dir}/image/config/includes.chroot/usr/local/sbin/${script}" \
+  cmp "${image_dir}/config/includes.chroot/usr/local/sbin/${script}" \
     "${work_dir}/${script}"
   grep -Eq "^-rwx[^ ]* .*usr/local/sbin/${script}$" "${work_dir}/squashfs-files"
 done

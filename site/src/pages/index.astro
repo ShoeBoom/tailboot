@@ -1,7 +1,5 @@
 ---
 import "../styles/global.css";
-import iconUrl from "../../icon.svg?url";
-import logoUrl from "../../logo.svg?url";
 
 const description = "Create a Tailboot live ISO with Tailscale SSH enabled.";
 const socialImageUrl = new URL("/social.png", Astro.site).href;
@@ -28,12 +26,12 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={socialImageUrl} />
     <meta name="twitter:image:alt" content="Tailboot logo" />
-    <link rel="icon" href={iconUrl} type="image/svg+xml" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <title>Tailboot</title>
   </head>
   <body class="m-0 font-sans text-[15px]/[1.5]">
     <header class="mx-auto flex w-[min(100%-2.5rem,62rem)] flex-wrap items-center justify-between gap-4 border-b border-line py-5">
-      <img class="block h-7 w-auto" src={logoUrl} alt="Tailboot" width="1238" height="409" />
+      <img class="block h-7 w-auto" src="/logo.svg" alt="Tailboot" width="1238" height="409" />
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
         <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">GitHub</a>
         <span>Made with ❤️ by <a href="https://x.com/Shoeboom" rel="noreferrer" aria-label="@Shoeboom on X">@Shoeboom</a></span>
@@ -210,7 +208,7 @@ sudo -i</code></pre>
     </main>
 
     <script>
-      import { patchTailbootIso } from "../../tailboot-iso.ts";
+      import { patchTailbootIso } from "../../../tailboot-iso.ts";
 
       type SaveFilePicker = (options: {
         suggestedName: string;
