@@ -10,11 +10,10 @@
   <a href="https://tailboot.download/"><strong>Create a Tailboot USB drive</strong></a>
 </p>
 
-Tailboot is a Debian 13 live image for computers that do not have a display.
-It connects the computer to your tailnet. It then starts Tailscale SSH.
+Tailboot is a Debian 13 live image. It connects the computer to your tailnet.
+It then starts Tailscale SSH.
 
-You do not have to install an operating system. You do not need a display or a
-keyboard. Tailboot runs from a USB drive.
+You do not have to install an operating system. Tailboot runs from a USB drive.
 
 Tailboot does not install Debian on the computer. To use the usual operating
 system, first shut down Tailboot. Remove the USB drive. Then, start the computer.
@@ -23,7 +22,6 @@ system, first shut down Tailboot. Remove the USB drive. Then, start the computer
 
 You can use Tailboot to:
 
-- Connect to a computer that does not have a display.
 - Prepare a new server before you install an operating system.
 - Use Debian for a short time. Tailboot does not replace the installed operating
   system.
@@ -85,8 +83,7 @@ your browser. It does not send your credentials to the Tailboot server.
 3. Connect the USB drive to the target computer.
 4. Start the computer from the USB drive.
 
-Tailboot starts automatically on BIOS and UEFI systems. You do not need a
-display or a keyboard.
+Tailboot supports BIOS and UEFI systems.
 
 Tailboot uses Ethernet as the primary connection. If Ethernet has no default
 route, Tailboot uses the Wi-Fi network that you added to the ISO.
