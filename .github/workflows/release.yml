@@ -22,6 +22,7 @@ jobs:
     outputs:
       iso_name: ${{ steps.metadata.outputs.iso_name }}
       release_tag: ${{ steps.metadata.outputs.release_tag }}
+      config_offset: ${{ steps.config.outputs.offset }}
     steps:
       - name: Install build tools
         run: |
@@ -81,6 +82,24 @@ jobs:
       - name: Verify configuration with Debian's NetworkManager
         run: sudo chroot image/chroot /bin/sh < image/scripts/test-configure.sh
 
+      - name: Set up Node for ISO patch tests
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Read configuration byte offset
+        id: config
+        run: |
+          offset=$(./image/scripts/config-offset.sh "image/dist/${{ steps.metadata.outputs.iso_name }}")
+          echo "offset=${offset}" >> "${GITHUB_OUTPUT}"
+
+      - name: Test browser customizer against the built ISO
+        run: |
+          node --test tailboot-iso.test.ts
+          node image/scripts/test-iso-patch.ts \
+            "image/dist/${{ steps.metadata.outputs.iso_name }}" "${{ steps.config.outputs.offset }}"
+
       - name: Create checksum
         working-directory: image/dist
         run: sha256sum "${{ steps.metadata.outputs.iso_name }}" > "${{ steps.metadata.outputs.iso_name }}.sha256"
@@ -113,6 +132,15 @@ jobs:
           assets=$(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
           if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}" \
             && printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
+            # A rebuild may lay out files differently. Only reuse its offset if
+            # the published ISO is identical to the one we just verified.
+            gh release download "${RELEASE_TAG}" --pattern "${ISO_NAME}.sha256" \
+              --dir "${RUNNER_TEMP}/tailboot-release"
+            if ! cmp "image/dist/${ISO_NAME}.sha256" \
+              "${RUNNER_TEMP}/tailboot-release/${ISO_NAME}.sha256"; then
+              echo "The rebuilt ISO differs from the published release; refusing to deploy its offset." >&2
+              exit 1
+            fi
             exit 0
           fi
 
@@ -138,6 +166,7 @@ jobs:
         env:
           PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
           PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
+          PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ needs.release-iso.outputs.config_offset }}
 
   deploy-site:
     needs: build-site

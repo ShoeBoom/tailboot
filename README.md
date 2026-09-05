@@ -159,3 +159,28 @@ sudo ./image/scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
 The script writes the ISO to `image/dist/`.
+
+CI uses `xorriso` to locate `/TAILBOOT.JSON` after building and verifying the
+ISO. It passes the byte offset to Astro as `PUBLIC_TAILBOOT_CONFIG_OFFSET`,
+alongside the release tag and ISO name. The browser checks and replaces only
+that 4096-byte slot while streaming the download.
+
+To test the browser customizer against a built ISO with Node and `xorriso`:
+
+```sh
+config_offset=$(./image/scripts/config-offset.sh image/dist/tailboot-local-amd64.iso)
+node image/scripts/test-iso-patch.ts image/dist/tailboot-local-amd64.iso "${config_offset}"
+```
+
+This checks that xorriso can extract the customized JSON and that the image
+size and every byte outside the slot stay unchanged. CI runs this test before
+publishing a release. A release retry refuses to deploy the rebuilt ISO's
+offset if its checksum differs from the existing release asset.
+
+For a local site build using a published ISO, set `PUBLIC_TAILBOOT_RELEASE`,
+`PUBLIC_TAILBOOT_ISO_NAME`, and the offset obtained from that exact ISO:
+
+```sh
+export PUBLIC_TAILBOOT_CONFIG_OFFSET=$(./image/scripts/config-offset.sh path/to/published.iso)
+pnpm build
+```

@@ -78,6 +78,7 @@ test("patches across arbitrary chunk boundaries without changing ISO size", asyn
   const progress: number[] = [];
 
   await patchTailbootIso({
+    configOffset: encode(before).byteLength,
     source: new ChunkedBlob(input, [1, 7, 31, 2]),
     config: { authKey: "tskey-auth-test-key" },
     destination: output.stream,
@@ -95,11 +96,12 @@ test("patches across arbitrary chunk boundaries without changing ISO size", asyn
   assert.equal(progress.at(-1), input.byteLength);
 });
 
-test("rejects images without exactly one empty slot", async () => {
-  for (const contents of ["no slot", "~".repeat(512) + "\n", CONFIG_PLACEHOLDER.repeat(2)]) {
+test("rejects missing, modified, and truncated slots", async () => {
+  for (const contents of ["no slot", "~".repeat(512) + "\n", CONFIG_PLACEHOLDER.slice(0, -1), CONFIG_PLACEHOLDER.replace("V1", "V2")]) {
     const output = memoryDestination();
     await assert.rejects(
       patchTailbootIso({
+        configOffset: 0,
         source: new Blob([contents]),
         config: { authKey: "tskey-auth-test-key" },
         destination: output.stream,
@@ -116,6 +118,7 @@ test("round-trips Unicode and escaped credentials in a fixed-size JSON record", 
   };
   const output = memoryDestination();
   await patchTailbootIso({
+    configOffset: 0,
     source: chunkedStream(encode(CONFIG_PLACEHOLDER), [4094, 1]),
     config,
     destination: output.stream,
@@ -131,6 +134,7 @@ test("accepts an exact fit and aborts oversized UTF-8 configuration without writ
   const exactFit = { authKey: "x".repeat(capacity - overhead) };
   const output = memoryDestination();
   await patchTailbootIso({
+    configOffset: 0,
     source: new Blob([CONFIG_PLACEHOLDER]),
     config: exactFit,
     destination: output.stream,
@@ -141,6 +145,7 @@ test("accepts an exact fit and aborts oversized UTF-8 configuration without writ
     let aborted = false;
     let written = false;
     await assert.rejects(patchTailbootIso({
+      configOffset: 0,
       source: new Blob([CONFIG_PLACEHOLDER]),
       config: { authKey },
       destination: new WritableStream({
@@ -157,6 +162,7 @@ test("aborts the destination on a mid-download network failure", async () => {
   let aborted = false;
   let pulls = 0;
   await assert.rejects(patchTailbootIso({
+    configOffset: 0,
     source: new ReadableStream({
       pull(controller) {
         if (pulls++ === 0) controller.enqueue(encode(CONFIG_PLACEHOLDER));
@@ -167,4 +173,74 @@ test("aborts the destination on a mid-download network failure", async () => {
     destination: new WritableStream({ abort() { aborted = true; } }),
   }), /connection lost/);
   assert.equal(aborted, true);
+});
+
+test("patches only the supplied offset across aligned and unaligned chunks", async () => {
+  const slotSize = encode(CONFIG_PLACEHOLDER).byteLength;
+  const input = encode(CONFIG_PLACEHOLDER.repeat(3));
+  for (const chunkSizes of [[input.length], [slotSize], [slotSize - 1, 2], [1, 7, 31]]) {
+    const output = memoryDestination();
+    await patchTailbootIso({
+      source: chunkedStream(input, chunkSizes),
+      configOffset: slotSize,
+      config: { authKey: "test" },
+      destination: output.stream,
+    });
+    const patched = join(output.chunks);
+    assert.equal(patched.length, input.length);
+    assert.deepEqual(patched.subarray(0, slotSize), input.subarray(0, slotSize));
+    assert.deepEqual(patched.subarray(slotSize * 2), input.subarray(slotSize * 2));
+    assert.deepEqual(JSON.parse(decode(patched.subarray(slotSize, slotSize * 2))), { authKey: "test" });
+  }
+});
+
+test("passes chunks outside the slot through without copying", async () => {
+  const before = encode("header");
+  const after = encode("footer");
+  const input = [before, encode(CONFIG_PLACEHOLDER), after];
+  const output: Uint8Array[] = [];
+  await patchTailbootIso({
+    source: new ReadableStream({
+      start(controller) {
+        for (const chunk of input) controller.enqueue(chunk);
+        controller.close();
+      },
+    }),
+    configOffset: before.length,
+    config: { authKey: "test" },
+    destination: new WritableStream({ write(chunk) { output.push(chunk); } }),
+  });
+  assert.equal(output[0], before);
+  assert.equal(output.at(-1), after);
+});
+
+test("rejects invalid offsets before writing and aborts the destination", async () => {
+  for (const configOffset of [NaN, Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER]) {
+    let aborted = false;
+    let written = false;
+    await assert.rejects(patchTailbootIso({
+      source: new Blob([CONFIG_PLACEHOLDER]),
+      configOffset,
+      config: { authKey: "test" },
+      destination: new WritableStream({
+        write() { written = true; },
+        abort() { aborted = true; },
+      }),
+    }), /offset/);
+    assert.equal(aborted, true);
+    assert.equal(written, false);
+  }
+});
+
+test("aborts on a stale offset or a slot truncated across chunks", async () => {
+  for (const configOffset of [0, 5, 6, 7, 100_000]) {
+    let aborted = false;
+    await assert.rejects(patchTailbootIso({
+      source: chunkedStream(encode("header" + CONFIG_PLACEHOLDER.slice(0, -1)), [31, 1]),
+      configOffset,
+      config: { authKey: "test" },
+      destination: new WritableStream({ abort() { aborted = true; } }),
+    }), /slot/);
+    assert.equal(aborted, true);
+  }
 });
