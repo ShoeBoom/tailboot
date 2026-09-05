@@ -160,16 +160,6 @@ sudo -i</code></pre>
           leave your browser.
         </p>
 
-        <h3>Why does the download come from a proxy?</h3>
-        <p>
-          GitHub Releases does not permit a browser to read a file from a
-          different website. A small
-          <a href="https://github.com/ShoeBoom/tailboot/tree/main/proxy" rel="noreferrer">Cloudflare Worker</a>
-          at <code>proxy.tailboot.download</code> sends the base ISO from
-          GitHub Releases to your browser. The proxy accepts only a release
-          tag. It does not receive your key or any other data from you.
-        </p>
-
         <h3>How does the browser change the ISO?</h3>
         <p>
           The base ISO has a file <code>/TAILBOOT.JSON</code> with a
