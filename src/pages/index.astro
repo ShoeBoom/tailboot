@@ -33,7 +33,10 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
   <body>
     <header>
       <img src={logoUrl} alt="Tailboot" width="1238" height="409" />
-      <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">GitHub</a>
+      <div class="header-links">
+        <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">GitHub</a>
+        <span>Made with ❤️ by <a href="https://x.com/Shoeboom" rel="noreferrer" aria-label="@Shoeboom on X">@Shoeboom</a></span>
+      </div>
     </header>
 
     <main>
@@ -297,6 +300,8 @@ sudo -i</code></pre>
 
   header {
     display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
     align-items: center;
     justify-content: space-between;
     padding-block: 1.25rem;
@@ -307,6 +312,13 @@ sudo -i</code></pre>
     display: block;
     width: auto;
     height: 1.75rem;
+  }
+
+  .header-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
   }
 
   main {
