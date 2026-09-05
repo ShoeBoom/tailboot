@@ -1,6 +1,8 @@
 packages:
   - proxy
 
+minimumReleaseAge: 4320 # Three days, in minutes.
+
 allowBuilds:
   esbuild: true
   workerd: true
