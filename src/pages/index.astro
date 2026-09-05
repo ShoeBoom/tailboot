@@ -65,7 +65,8 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
 
         <section class="panel" aria-labelledby="create-heading">
           <h2 id="create-heading">2. Create the ISO</h2>
-          <form
+          <!-- Keep credentials outside a form so native submission is impossible. -->
+          <div
             id="customizer"
             data-iso-url={isoUrl}
             data-iso-name={isoName}
@@ -88,7 +89,7 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
                 <p class="fine">WPA2/WPA3 Personal. Ethernet takes priority; Wi-Fi is the fallback. Leave the network name empty to use Ethernet only.</p>
               </div>
             </details>
-            <button type="submit" disabled>Create ISO</button>
+            <button type="button" disabled>Create ISO</button>
             <noscript>Enable JavaScript to customize an ISO in your browser.</noscript>
             <progress id="progress" hidden></progress>
             <p id="status" role="status" aria-live="polite">
@@ -96,7 +97,7 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
                 ? `Base image: ${release}`
                 : "No release image configured."}
             </p>
-          </form>
+          </div>
           <p class="fine">
             Credentials are written into the ISO in your browser and are not
             uploaded. The resulting image contains them in plain text; keep
@@ -148,25 +149,26 @@ sudo -i</code></pre>
         createWritable: () => Promise<WritableStream<Uint8Array>>;
       }>;
 
-      const form = document.querySelector<HTMLFormElement>("#customizer")!;
+      const customizer = document.querySelector<HTMLDivElement>("#customizer")!;
       const keyInput = document.querySelector<HTMLInputElement>("#auth-key")!;
       const ssidInput = document.querySelector<HTMLInputElement>("#wifi-ssid")!;
       const passwordInput = document.querySelector<HTMLInputElement>("#wifi-password")!;
-      const button = form.querySelector<HTMLButtonElement>("button")!;
+      const button = customizer.querySelector<HTMLButtonElement>("button")!;
       const progress = document.querySelector<HTMLProgressElement>("#progress")!;
       const status = document.querySelector<HTMLParagraphElement>("#status")!;
       const pickFile = (window as Window & { showSaveFilePicker?: SaveFilePicker })
         .showSaveFilePicker;
 
-      button.disabled = !form.dataset.isoUrl;
+      button.disabled = !customizer.dataset.isoUrl;
       ssidInput.addEventListener("input", () => {
         passwordInput.required = ssidInput.value.length > 0;
       });
 
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const isoUrl = form.dataset.isoUrl;
+      button.addEventListener("click", async () => {
+        const isoUrl = customizer.dataset.isoUrl;
         if (!isoUrl || button.disabled) return;
+        passwordInput.required = ssidInput.value.length > 0;
+        if (!passwordInput.reportValidity()) return;
         const config = {
           authKey: keyInput.value,
           ...(ssidInput.value ? {
@@ -180,7 +182,7 @@ sudo -i</code></pre>
         const download = new AbortController();
 
         try {
-          const fileName = (form.dataset.isoName ?? "tailboot.iso").replace(
+          const fileName = (customizer.dataset.isoName ?? "tailboot.iso").replace(
             /\.iso$/,
             "-custom.iso",
           );
@@ -375,7 +377,7 @@ sudo -i</code></pre>
     border-top: 1px solid #ddd;
   }
 
-  form {
+  #customizer {
     display: grid;
     gap: 0.6rem;
   }
