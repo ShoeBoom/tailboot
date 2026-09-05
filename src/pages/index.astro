@@ -1,4 +1,5 @@
 ---
+import X from "../components/X.astro";
 import "../styles/global.css";
 import iconUrl from "../../icon.svg?url";
 import logoUrl from "../../logo.svg?url";
@@ -36,7 +37,7 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
       <img class="block h-7 w-auto" src={logoUrl} alt="Tailboot" width="1238" height="409" />
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
         <a href="https://github.com/ShoeBoom/tailboot" rel="noreferrer">GitHub</a>
-        <span>Made with ❤️ by <a href="https://x.com/Shoeboom" rel="noreferrer" aria-label="@Shoeboom on X">@Shoeboom</a></span>
+        <span>Made with ❤️ by <a class="inline-flex items-center gap-1" href="https://x.com/Shoeboom" rel="noreferrer" aria-label="@Shoeboom on X"><X class="h-[1em] w-[1em]" aria-hidden="true" />@Shoeboom</a></span>
       </div>
     </header>
 
