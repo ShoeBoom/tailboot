@@ -2,6 +2,8 @@
 import iconUrl from "../../icon.svg?url";
 import logoUrl from "../../logo.svg?url";
 
+const description = "Create a Tailboot live ISO with Tailscale SSH enabled.";
+const socialImageUrl = new URL("/social.png", Astro.site).href;
 const isoName = import.meta.env.PUBLIC_TAILBOOT_ISO_NAME ?? "tailboot.iso";
 const release = import.meta.env.PUBLIC_TAILBOOT_RELEASE ?? "";
 const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
@@ -12,10 +14,19 @@ const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta
-      name="description"
-      content="Create a Tailboot live ISO with Tailscale SSH enabled."
-    />
+    <meta name="description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Tailboot" />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={Astro.site?.href} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta property="og:image:alt" content="Tailboot logo" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content="Tailboot logo" />
     <link rel="icon" href={iconUrl} type="image/svg+xml" />
     <title>Tailboot</title>
   </head>
