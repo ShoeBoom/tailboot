@@ -11,7 +11,7 @@ async function main() {
     .name("tailboot")
     .description("Download and customize a Tailboot ISO.")
     .argument("<auth-key>", "Tailscale auth key")
-    .argument("<output.iso>", "path for the customized ISO")
+    .argument("[output.iso]", "path for the customized ISO", metadata.isoName)
     .option("--wifi-ssid <ssid>", "Wi-Fi network name")
     .option("--wifi-password <password>", "Wi-Fi password");
   if (args.length === 0) {
@@ -20,7 +20,7 @@ async function main() {
   }
   program.parse(args, { from: "user" });
   const values = program.opts<{ wifiSsid?: string; wifiPassword?: string }>();
-  const positional = z.array(z.string().min(1)).length(2).parse(program.args);
+  const positional = z.array(z.string().min(1)).length(2).parse(program.processedArgs);
   const authKey = positional[0];
   const output = positional[1];
   const wifi = z.object({ ssid: z.string().min(1), password: z.string().min(1) }).optional()
