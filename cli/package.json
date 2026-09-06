@@ -1,0 +1,14 @@
+{
+  "name": "@tailboot/cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.ts && scriptc build src/index.ts --dynamic -o dist/tailboot"
+  },
+  "devDependencies": {
+    "scriptc": "0.0.36"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
+  }
+}
