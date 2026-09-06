@@ -1,5 +1,5 @@
 /**
- * Browser-side Tailboot ISO customizer.
+ * Tailboot ISO customizer, shared by the browser and CLI.
  *
  * The base ISO must contain CONFIG_PLACEHOLDER in an uncompressed file
  * at /TAILBOOT.JSON.

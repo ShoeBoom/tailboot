@@ -10,6 +10,7 @@ const configOffset = release
   ? z.coerce.number().int().nonnegative().parse(import.meta.env.PUBLIC_TAILBOOT_CONFIG_OFFSET)
   : undefined;
 const isoUrl = release ? `https://proxy.tailboot.download/${release}` : "";
+const releaseUrl = `https://github.com/ShoeBoom/tailboot/releases/download/${release}`;
 ---
 
 <!doctype html>
@@ -199,8 +200,14 @@ sudo -i</code></pre>
 
         <h3 class="mt-5 mb-[0.4rem] text-base font-bold">Can I make the ISO without the website?</h3>
         <p class="mb-[0.85rem]">
-          Not yet. A command-line tool is planned in
-          <a href="https://github.com/ShoeBoom/tailboot/issues/23" rel="noreferrer">issue #23</a>.
+          Yes. Download the CLI for your Linux computer:
+          {release ? <>
+            <a href={`${releaseUrl}/tailboot-${release}-linux-x64`}>x64</a>{" or "}
+            <a href={`${releaseUrl}/tailboot-${release}-linux-arm64`}>arm64</a>.
+          </> : <a href="https://github.com/ShoeBoom/tailboot/releases">release downloads</a>}
+          {" "}Run it with <code>--help</code> for instructions. Each binary downloads
+          its corresponding ISO release, verifies its SHA-256, and customizes it
+          in memory before saving. It includes Node.js and processes credentials locally.
         </p>
 
         <h3 class="mt-5 mb-[0.4rem] text-base font-bold">Why must I restrict the key with a tag?</h3>

@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@nubjs/nub':
+        specifier: 0.8.2
+        version: 0.8.2
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
@@ -972,6 +975,55 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
+
+  '@nubjs/nub-darwin-arm64@0.8.2':
+    resolution: {integrity: sha512-SZzxORIoekBlhS2COa7ojN+BDw5avGpPYNsWupWEJUhjWc4TQHIA1v/sQMAb9nNhhRcbynTSSQNJ8Fhml3gOAg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@nubjs/nub-darwin-x64@0.8.2':
+    resolution: {integrity: sha512-LCQhn0rvOCi2I2+jlo17lZX3QM0BaVsPyT6uwaFxpXRlV6fEC3ZrS2bip2xQCTkglUg3LamlUh8P1530cb860Q==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@nubjs/nub-linux-arm64-musl@0.8.2':
+    resolution: {integrity: sha512-VQrUOQxhnQrCfeLMqOH53bABWj0Xs5hUspzy+Aa+1gWVVmqgWSscXGw7xqa2XJP9qYxrohSt2WQFQMaLyhqkKg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@nubjs/nub-linux-arm64@0.8.2':
+    resolution: {integrity: sha512-kF39SVXIl54gM9G2uMyXpkadLSci7RYZ26FECk7R8UDyEXx63vmtlW6ukhP63YodBVCSOENSSQLCK67ZSH8yQQ==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@nubjs/nub-linux-x64-musl@0.8.2':
+    resolution: {integrity: sha512-dXl3qR7jbxE+/4/UNwMNCjKhb8pHWlt46Hh5dHnQskkyDjK6b8k7r1GSPWCLi9PUGyjtPFzgOeQJXupdDkr3aw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@nubjs/nub-linux-x64@0.8.2':
+    resolution: {integrity: sha512-CyZ+GU+xjYhImGla0HZFAL6dxnFfAw8FQWVdHqa20xoYInlbyFmmXRvX+ts01YfgqO+WYTcx+ZdRtDlVgyLBQw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@nubjs/nub-win32-arm64@0.8.2':
+    resolution: {integrity: sha512-lqfGQEIjB58JtMqRVIKmm2El3FoRtBRfMEp8dl98L59/VQuhvF9CM1dElGMSLKlj9KLxM24IphAeBLQX8xjL6A==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@nubjs/nub-win32-x64@0.8.2':
+    resolution: {integrity: sha512-CsmfOaOLFsXN5gZzzOs+241rHHmHp4LWiU78zJcCQhwKQqyG2JkuwHpFxE3f6o3ikURayCnM6gZgotYRE7js/A==}
+    cpu: [x64]
+    os: [win32]
+
+  '@nubjs/nub@0.8.2':
+    resolution: {integrity: sha512-m+KiuVC8fFqDXpAwAcy9yzCAdRyk98JKsqfImYcqe9mkHHDVmhfUZXhHDVut2fxYhm4jtXITAqp/2T6xRXe/BQ==}
+    engines: {node: '>=18.19.0'}
+    hasBin: true
 
   '@oslojs/encoding@1.1.0':
     resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
@@ -3072,6 +3124,41 @@ snapshots:
       '@emnapi/runtime': 1.11.3
       '@tybys/wasm-util': 0.10.3
     optional: true
+
+  '@nubjs/nub-darwin-arm64@0.8.2':
+    optional: true
+
+  '@nubjs/nub-darwin-x64@0.8.2':
+    optional: true
+
+  '@nubjs/nub-linux-arm64-musl@0.8.2':
+    optional: true
+
+  '@nubjs/nub-linux-arm64@0.8.2':
+    optional: true
+
+  '@nubjs/nub-linux-x64-musl@0.8.2':
+    optional: true
+
+  '@nubjs/nub-linux-x64@0.8.2':
+    optional: true
+
+  '@nubjs/nub-win32-arm64@0.8.2':
+    optional: true
+
+  '@nubjs/nub-win32-x64@0.8.2':
+    optional: true
+
+  '@nubjs/nub@0.8.2':
+    optionalDependencies:
+      '@nubjs/nub-darwin-arm64': 0.8.2
+      '@nubjs/nub-darwin-x64': 0.8.2
+      '@nubjs/nub-linux-arm64': 0.8.2
+      '@nubjs/nub-linux-arm64-musl': 0.8.2
+      '@nubjs/nub-linux-x64': 0.8.2
+      '@nubjs/nub-linux-x64-musl': 0.8.2
+      '@nubjs/nub-win32-arm64': 0.8.2
+      '@nubjs/nub-win32-x64': 0.8.2
 
   '@oslojs/encoding@1.1.0': {}
 

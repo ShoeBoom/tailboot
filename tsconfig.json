@@ -12,6 +12,8 @@
   "include": [
     "tailboot-iso.ts",
     "tailboot-iso.test.ts",
+    "cli/**/*.ts",
+    ".github/scripts/*.ts",
     "image/scripts/test-iso-patch.ts"
   ]
 }

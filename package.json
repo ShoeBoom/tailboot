@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "pnpm --filter @tailboot/site dev",
     "build": "pnpm test && tsc --noEmit && pnpm --filter @tailboot/site build",
+    "build:cli": "node cli/build.ts",
     "preview": "pnpm --filter @tailboot/site preview",
-    "test": "node --test tailboot-iso.test.ts"
+    "test": "node --test tailboot-iso.test.ts cli/customize.test.ts .github/scripts/publish-release.test.ts"
   },
   "devDependencies": {
+    "@nubjs/nub": "0.8.2",
     "@types/node": "^26.4.0",
     "typescript": "^6.0.3"
   }

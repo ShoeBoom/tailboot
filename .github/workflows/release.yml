@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release-iso:
+  build-iso:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,6 +23,7 @@ jobs:
       iso_name: ${{ steps.metadata.outputs.iso_name }}
       release_tag: ${{ steps.metadata.outputs.release_tag }}
       config_offset: ${{ steps.config.outputs.offset }}
+      release_commit: ${{ steps.metadata.outputs.release_commit }}
     steps:
       - name: Install build tools
         run: |
@@ -42,7 +43,7 @@ jobs:
       - name: Check out release source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.sha }}
 
       - name: Define release artifact
         id: metadata
@@ -104,7 +105,25 @@ jobs:
         working-directory: image/dist
         run: sha256sum "${{ steps.metadata.outputs.iso_name }}" > "${{ steps.metadata.outputs.iso_name }}.sha256"
 
-      - name: Publish immutable release assets
+      - name: Write verified release metadata
+        env:
+          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+          ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
+          CONFIG_OFFSET: ${{ steps.config.outputs.offset }}
+        run: |
+          node --input-type=module <<'JS'
+          import { readFile, writeFile } from "node:fs/promises";
+          const isoName = process.env.ISO_NAME;
+          const checksum = await readFile(`image/dist/${isoName}.sha256`, "utf8");
+          await writeFile("image/dist/release.json", JSON.stringify({
+            tag: process.env.RELEASE_TAG,
+            isoName,
+            sha256: checksum.split(" ")[0],
+            configOffset: Number(process.env.CONFIG_OFFSET),
+          }, null, 2) + "\n");
+          JS
+
+      - name: Stage verified ISO in a new draft release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
@@ -112,51 +131,84 @@ jobs:
           CREATE_TAG: ${{ steps.metadata.outputs.create_tag }}
           ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
         run: |
-          if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            if [ "${CREATE_TAG}" = "true" ]; then
-              gh release create "${RELEASE_TAG}" \
-                "image/dist/${ISO_NAME}" \
-                "image/dist/${ISO_NAME}.sha256" \
-                --target "${RELEASE_COMMIT}" \
-                --title "Tailboot ${RELEASE_TAG}"
-            else
-              gh release create "${RELEASE_TAG}" \
-                "image/dist/${ISO_NAME}" \
-                "image/dist/${ISO_NAME}.sha256" \
-                --title "Tailboot ${RELEASE_TAG}" \
-                --verify-tag
-            fi
-            exit 0
+          tag_args=()
+          if [ "${CREATE_TAG}" = "false" ]; then
+            tag_args+=(--verify-tag)
           fi
+          # Creation fails if this release already exists. Never reuse or replace
+          # assets from an earlier build, including an unfinished draft.
+          gh release create "${RELEASE_TAG}" \
+            "image/dist/${ISO_NAME}" "image/dist/${ISO_NAME}.sha256" \
+            image/dist/release.json \
+            --draft --target "${RELEASE_COMMIT}" \
+            --title "Tailboot ${RELEASE_TAG}" "${tag_args[@]}"
 
-          assets=$(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
-          if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}" \
-            && printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
-            # A rebuild may lay out files differently. Only reuse its offset if
-            # the published ISO is identical to the one we just verified.
-            gh release download "${RELEASE_TAG}" --pattern "${ISO_NAME}.sha256" \
-              --dir "${RUNNER_TEMP}/tailboot-release"
-            if ! cmp "image/dist/${ISO_NAME}.sha256" \
-              "${RUNNER_TEMP}/tailboot-release/${ISO_NAME}.sha256"; then
-              echo "The rebuilt ISO differs from the published release; refusing to deploy its offset." >&2
-              exit 1
-            fi
-            exit 0
-          fi
+  build-cli:
+    needs: build-iso
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x64
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ needs.build-iso.outputs.release_tag }}
+      ISO_NAME: ${{ needs.build-iso.outputs.iso_name }}
+      CLI_NAME: tailboot-${{ needs.build-iso.outputs.release_tag }}-${{ matrix.platform }}
+    steps:
+      - name: Check out the exact ISO source commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.build-iso.outputs.release_commit }}
 
-          echo "The release exists without both expected assets; refusing to modify it." >&2
-          exit 1
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Install pinned build dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Download the verified ISO and its metadata from the draft
+        run: |
+          test "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" = true
+          gh release download "${RELEASE_TAG}" --dir image/dist \
+            --pattern "${ISO_NAME}" --pattern "${ISO_NAME}.sha256" --pattern release.json
+          (cd image/dist && sha256sum --check "${ISO_NAME}.sha256")
+
+      - name: Test and compile CLI with embedded Node and release metadata
+        run: |
+          pnpm test
+          pnpm exec tsc --noEmit
+          pnpm build:cli image/dist/release.json
+          node cli/test-binary.ts "cli/dist/${CLI_NAME}" \
+            "image/dist/${ISO_NAME}" image/dist/release.json
+
+      - name: Stage verified CLI and checksum in the draft
+        run: |
+          (cd cli/dist && sha256sum "${CLI_NAME}" > "${CLI_NAME}.sha256")
+          test "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" = true
+          gh release upload "${RELEASE_TAG}" "cli/dist/${CLI_NAME}" "cli/dist/${CLI_NAME}.sha256"
 
   build-site:
-    needs: release-iso
+    needs: build-iso
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - name: Check out release tag
+      - name: Check out the exact ISO source commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ needs.release-iso.outputs.release_tag }}
+          ref: ${{ needs.build-iso.outputs.release_commit }}
 
       - name: Build Astro site with the release metadata
         uses: withastro/action@e84f40bd8d2caa9e768ec82ad30dd81f0b280853 # v6.1.2
@@ -164,12 +216,31 @@ jobs:
           out-dir: site/dist
           cache-dir: site/node_modules/.astro
         env:
-          PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
-          PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
-          PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ needs.release-iso.outputs.config_offset }}
+          PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.build-iso.outputs.iso_name }}
+          PUBLIC_TAILBOOT_RELEASE: ${{ needs.build-iso.outputs.release_tag }}
+          PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ needs.build-iso.outputs.config_offset }}
+
+  publish-release:
+    needs: [build-iso, build-cli, build-site]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the exact ISO source commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.build-iso.outputs.release_commit }}
+
+      - name: Verify all uploaded assets and publish the immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.build-iso.outputs.release_tag }}
+          ISO_NAME: ${{ needs.build-iso.outputs.iso_name }}
+          CONFIG_OFFSET: ${{ needs.build-iso.outputs.config_offset }}
+        run: bash .github/scripts/publish-release.sh
 
   deploy-site:
-    needs: build-site
+    needs: [build-site, publish-release]
     runs-on: ubuntu-latest
     permissions:
       pages: write

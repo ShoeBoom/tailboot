@@ -76,6 +76,34 @@ apply to the tag.
 Your browser downloads the base ISO. It adds your configuration to the ISO in
 your browser. It does not send your credentials to the Tailboot server.
 
+Alternatively, download the Linux x64 or arm64 CLI and its `.sha256` file from
+the same [release](https://github.com/ShoeBoom/tailboot/releases). Choose the CLI
+architecture for the computer creating the ISO; the ISO itself boots x86-64 PCs.
+Verify the binary with `sha256sum --check <binary>.sha256`, then make it executable
+with `chmod +x <binary>`.
+
+For example, after naming the executable `tailboot`:
+
+```sh
+read -rsp 'Tailscale auth key: ' TAILBOOT_AUTH_KEY; echo
+export TAILBOOT_AUTH_KEY
+./tailboot --output customized.iso
+unset TAILBOOT_AUTH_KEY
+```
+
+For Wi-Fi, also set `TAILBOOT_WIFI_SSID` and `TAILBOOT_WIFI_PASSWORD`, or use
+`--wifi-ssid` and `--wifi-password`. The key can also be supplied with `--auth-key`.
+Environment variables avoid putting credentials in command-line arguments.
+Run `--help` for usage or `--version` for the embedded release metadata.
+
+The CLI includes Node.js, packaged with [Nub](https://github.com/nubjs/nub).
+You do not need to install Node.js or Nub. On first run, Nub extracts its runtime
+and application into a local cache. ISO downloads and customization stay in RAM:
+allow enough free memory for the entire ISO plus runtime and download overhead.
+It downloads only its embedded release, checks the base ISO's SHA-256, and uses
+the same patcher as the website. It does not accept local ISOs or overwrite
+existing output files. Credentials stay on your computer and are never logged.
+
 ### 3. Write the ISO to a USB drive
 
 1. Use [Etcher](https://etcher.balena.io/), `dd`, or an equivalent ISO tool.
@@ -122,8 +150,8 @@ policy examples.
 - The auth key expires after 90 days. When the key expires, create a new key and
   a new ISO.
 - Each [GitHub release](https://github.com/ShoeBoom/tailboot/releases) contains
-  the base ISO and its SHA-256 checksum. The checksum applies only to the base
-  ISO. It does not apply to a customized ISO.
+  the base ISO, Linux CLI binaries, and a SHA-256 checksum for each. The ISO
+  checksum applies only to the base ISO, not a customized ISO.
 
 ## Product limits
 
@@ -159,3 +187,24 @@ sudo ./image/scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
 The script writes the ISO to `image/dist/`.
+
+Release CI verifies the ISO and creates `release.json` with its tag, filename,
+SHA-256 and verified configuration byte offset. On a Linux x64 or arm64 build
+machine, compile and test the CLI with that metadata:
+
+```sh
+pnpm build:cli image/dist/release.json
+node cli/test-binary.ts cli/dist/<binary> image/dist/<iso> image/dist/release.json
+```
+
+Nub and the embedded Node version are pinned. CLI tests run the executable with
+an empty tool search path and redirect its fixed release URL through a test-only
+HTTP fixture. Release CI runs them against the actual verified ISO on both
+architectures, including failed downloads and configuration errors.
+
+The ISO, CLI binaries, and website all build from the same source commit. Assets
+are staged in a new draft release. Publication waits for every build and test,
+then downloads the staged assets to verify their checksums and metadata. Only
+after publication does CI deploy the website. Failures leave the previous release
+and website available. Existing releases are never reused or overwritten; retry
+a failed release with a new tag (or a new manual workflow run).
