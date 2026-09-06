@@ -193,9 +193,13 @@ SHA-256 and verified configuration byte offset. On a Linux x64 or arm64 build
 machine, compile and test the CLI with that metadata:
 
 ```sh
-pnpm build:cli image/dist/release.json
-node cli/test-binary.ts cli/dist/<binary> image/dist/<iso> image/dist/release.json
+pnpm build:cli
+node cli/test-binary.ts cli/dist/tailboot image/dist/<iso> image/dist/release.json
 ```
+
+The build command uses Nub directly to bundle TypeScript, inject
+`image/dist/release.json`, and embed Node in `cli/dist/tailboot`. CI gives the
+verified binary its release and platform filename when staging it for upload.
 
 Nub and the embedded Node version are pinned. CLI tests run the executable with
 an empty tool search path and redirect its fixed release URL through a test-only

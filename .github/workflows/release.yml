@@ -191,12 +191,13 @@ jobs:
         run: |
           pnpm test
           pnpm exec tsc --noEmit
-          pnpm build:cli image/dist/release.json
-          node cli/test-binary.ts "cli/dist/${CLI_NAME}" \
+          pnpm build:cli
+          node cli/test-binary.ts cli/dist/tailboot \
             "image/dist/${ISO_NAME}" image/dist/release.json
 
       - name: Stage verified CLI and checksum in the draft
         run: |
+          mv cli/dist/tailboot "cli/dist/${CLI_NAME}"
           (cd cli/dist && sha256sum "${CLI_NAME}" > "${CLI_NAME}.sha256")
           test "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" = true
           gh release upload "${RELEASE_TAG}" "cli/dist/${CLI_NAME}" "cli/dist/${CLI_NAME}.sha256"

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter @tailboot/site dev",
     "build": "pnpm test && tsc --noEmit && pnpm --filter @tailboot/site build",
-    "build:cli": "node cli/build.ts",
+    "build:cli": "mkdir -p cli/dist && nub compile cli/main.ts --target 24.18.0 --define-file TAILBOOT_RELEASE=image/dist/release.json --out cli/dist/tailboot",
     "preview": "pnpm --filter @tailboot/site preview",
     "test": "node --test tailboot-iso.test.ts cli/customize.test.ts .github/scripts/publish-release.test.ts"
   },
