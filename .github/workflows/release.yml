@@ -181,6 +181,7 @@ jobs:
       - name: Publish immutable release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.release-iso.outputs.release_tag }}
           RELEASE_COMMIT: ${{ needs.release-iso.outputs.release_commit }}
           CREATE_TAG: ${{ needs.release-iso.outputs.create_tag }}
