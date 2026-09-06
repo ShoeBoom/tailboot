@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { writeFileSync } from "node:fs";
+import { parseArgs } from "node:util";
 import { z } from "zod";
 import { createIsoPatcher } from "../../tailboot-iso-core.ts";
 import { metadata } from "../dist/release.ts";
@@ -7,17 +8,25 @@ import { metadata } from "../dist/release.ts";
 async function main() {
   const args = process.argv.slice(2);
   if (args.length === 0 || args[0] === "--help") {
-    console.log("Usage: tailboot <auth-key> <output.iso> [wifi-ssid wifi-password]");
+    console.log("Usage: tailboot <auth-key> <output.iso> [--wifi-ssid <ssid> --wifi-password <password>]");
     return;
   }
-  const values = z.array(z.string().min(1))
-    .refine((args) => args.length === 2 || args.length === 4)
-    .parse(args);
-  const authKey = values[0];
-  const output = values[1];
-  const config = values.length === 4
-    ? { authKey, wifi: { ssid: values[2], password: values[3] } }
-    : { authKey };
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      "wifi-ssid": { type: "string" },
+      "wifi-password": { type: "string" },
+    },
+  });
+  const positional = z.array(z.string().min(1)).length(2).parse(positionals);
+  const authKey = positional[0];
+  const output = positional[1];
+  const wifi = z.object({ ssid: z.string().min(1), password: z.string().min(1) }).optional()
+    .parse(values["wifi-ssid"] === undefined && values["wifi-password"] === undefined
+      ? undefined
+      : { ssid: values["wifi-ssid"], password: values["wifi-password"] });
+  const config = { authKey, wifi };
   const url = `https://github.com/ShoeBoom/tailboot/releases/download/${encodeURIComponent(metadata.release)}/${encodeURIComponent(metadata.isoName)}`;
 
   console.log(`Downloading ${metadata.isoName}…`);
