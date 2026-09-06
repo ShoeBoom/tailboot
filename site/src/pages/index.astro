@@ -199,8 +199,11 @@ sudo -i</code></pre>
 
         <h3 class="mt-5 mb-[0.4rem] text-base font-bold">Can I make the ISO without the website?</h3>
         <p class="mb-[0.85rem]">
-          Not yet. A command-line tool is planned in
-          <a href="https://github.com/ShoeBoom/tailboot/issues/23" rel="noreferrer">issue #23</a>.
+          Yes. Download the CLI for your operating system from the
+          <a href={release ? `https://github.com/ShoeBoom/tailboot/releases/tag/${release}` : "https://github.com/ShoeBoom/tailboot/releases"} rel="noreferrer">GitHub release</a>.
+          It downloads and verifies its corresponding base ISO, then adds your
+          credentials locally in memory. See the
+          <a href="https://github.com/ShoeBoom/tailboot#command-line-customizer" rel="noreferrer">CLI instructions</a>.
         </p>
 
         <h3 class="mt-5 mb-[0.4rem] text-base font-bold">Why must I restrict the key with a tag?</h3>

@@ -15,14 +15,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release-iso:
+  build-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    outputs:
-      iso_name: ${{ steps.metadata.outputs.iso_name }}
-      release_tag: ${{ steps.metadata.outputs.release_tag }}
-      config_offset: ${{ steps.config.outputs.offset }}
     steps:
       - name: Install build tools
         run: |
@@ -42,7 +38,7 @@ jobs:
       - name: Check out release source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.sha }}
 
       - name: Define release artifact
         id: metadata
@@ -100,76 +96,78 @@ jobs:
           node image/scripts/test-iso-patch.ts \
             "image/dist/${{ steps.metadata.outputs.iso_name }}" "${{ steps.config.outputs.offset }}"
 
-      - name: Create checksum
+      - name: Create base ISO checksum
+        id: checksum
         working-directory: image/dist
-        run: sha256sum "${{ steps.metadata.outputs.iso_name }}" > "${{ steps.metadata.outputs.iso_name }}.sha256"
-
-      - name: Publish immutable release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
-          RELEASE_COMMIT: ${{ steps.metadata.outputs.release_commit }}
-          CREATE_TAG: ${{ steps.metadata.outputs.create_tag }}
-          ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
         run: |
-          if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            if [ "${CREATE_TAG}" = "true" ]; then
-              gh release create "${RELEASE_TAG}" \
-                "image/dist/${ISO_NAME}" \
-                "image/dist/${ISO_NAME}.sha256" \
-                --target "${RELEASE_COMMIT}" \
-                --title "Tailboot ${RELEASE_TAG}"
-            else
-              gh release create "${RELEASE_TAG}" \
-                "image/dist/${ISO_NAME}" \
-                "image/dist/${ISO_NAME}.sha256" \
-                --title "Tailboot ${RELEASE_TAG}" \
-                --verify-tag
-            fi
-            exit 0
-          fi
+          sha256sum "${{ steps.metadata.outputs.iso_name }}" > "${{ steps.metadata.outputs.iso_name }}.sha256"
+          echo "sha256=$(cut -d ' ' -f1 "${{ steps.metadata.outputs.iso_name }}.sha256")" >> "${GITHUB_OUTPUT}"
 
-          assets=$(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
-          if printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}" \
-            && printf '%s\n' "${assets}" | grep -Fxq "${ISO_NAME}.sha256"; then
-            # A rebuild may lay out files differently. Only reuse its offset if
-            # the published ISO is identical to the one we just verified.
-            gh release download "${RELEASE_TAG}" --pattern "${ISO_NAME}.sha256" \
-              --dir "${RUNNER_TEMP}/tailboot-release"
-            if ! cmp "image/dist/${ISO_NAME}.sha256" \
-              "${RUNNER_TEMP}/tailboot-release/${ISO_NAME}.sha256"; then
-              echo "The rebuilt ISO differs from the published release; refusing to deploy its offset." >&2
-              exit 1
-            fi
-            exit 0
-          fi
-
-          echo "The release exists without both expected assets; refusing to modify it." >&2
-          exit 1
-
-  build-site:
-    needs: release-iso
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Check out release tag
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          ref: ${{ needs.release-iso.outputs.release_tag }}
+          go-version-file: cli/go.mod
+          cache: false
 
-      - name: Build Astro site with the release metadata
+      - name: Test CLI against the verified ISO
+        working-directory: cli
+        env:
+          TAILBOOT_TEST_ISO: ${{ github.workspace }}/image/dist/${{ steps.metadata.outputs.iso_name }}
+          TAILBOOT_TEST_OFFSET: ${{ steps.config.outputs.offset }}
+          TAILBOOT_TEST_SHA256: ${{ steps.checksum.outputs.sha256 }}
+        run: go test ./...
+
+      - name: Build CLI binaries with verified release metadata
+        env:
+          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+          ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
+          ISO_SHA256: ${{ steps.checksum.outputs.sha256 }}
+          CONFIG_OFFSET: ${{ steps.config.outputs.offset }}
+        run: |
+          ./cli/build.sh
+          ./cli/dist/tailboot-${RELEASE_TAG}-linux-amd64 --version
+
+      - name: Build Astro site with the same release metadata
         uses: withastro/action@e84f40bd8d2caa9e768ec82ad30dd81f0b280853 # v6.1.2
         with:
           out-dir: site/dist
           cache-dir: site/node_modules/.astro
         env:
-          PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
-          PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
-          PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ needs.release-iso.outputs.config_offset }}
+          PUBLIC_TAILBOOT_ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
+          PUBLIC_TAILBOOT_RELEASE: ${{ steps.metadata.outputs.release_tag }}
+          PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ steps.config.outputs.offset }}
+
+      - name: Stage and publish immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
+          RELEASE_COMMIT: ${{ steps.metadata.outputs.release_commit }}
+          CREATE_TAG: ${{ steps.metadata.outputs.create_tag }}
+        run: |
+          # Never reuse or modify an existing release, including an earlier draft.
+          # A failed run can be retried with a new tag.
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "This release already exists; use a new tag." >&2
+            exit 1
+          fi
+          tag_args=(--target "${RELEASE_COMMIT}")
+          if [ "${CREATE_TAG}" = "false" ]; then
+            tag_args+=(--verify-tag)
+          fi
+          gh release create "${RELEASE_TAG}" --draft \
+            "${tag_args[@]}" --title "Tailboot ${RELEASE_TAG}" --notes "Tailboot ${RELEASE_TAG}"
+          gh release upload "${RELEASE_TAG}" image/dist/* cli/dist/*
+
+          # Confirm every uploaded asset matches before making the release public.
+          staging="${RUNNER_TEMP}/tailboot-staged"
+          gh release download "${RELEASE_TAG}" --dir "${staging}"
+          for asset in image/dist/* cli/dist/*; do
+            cmp "$asset" "${staging}/$(basename "$asset")"
+          done
+          gh release edit "${RELEASE_TAG}" --draft=false --latest
 
   deploy-site:
-    needs: build-site
+    needs: build-release
     runs-on: ubuntu-latest
     permissions:
       pages: write
