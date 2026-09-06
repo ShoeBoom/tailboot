@@ -6,6 +6,5 @@ packages:
 minimumReleaseAge: 4320 # Three days, in minutes.
 
 allowBuilds:
-  scriptc: false # Optional native cache warming; builds compile what they need.
   esbuild: true
   workerd: true

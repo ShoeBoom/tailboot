@@ -117,18 +117,7 @@ jobs:
 
   build-cli:
     needs: release-iso
-    strategy:
-      matrix:
-        include:
-          - runner: windows-2025
-            asset: tailboot-windows-x64.exe
-          - runner: ubuntu-24.04
-            asset: tailboot-linux-x64
-          - runner: ubuntu-24.04-arm
-            asset: tailboot-linux-arm64
-          - runner: macos-15
-            asset: tailboot-macos-arm64
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -149,29 +138,27 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
-      - name: Set up Zig for Windows
-        if: runner.os == 'Windows'
-        uses: vercel-labs/setup-zig@83c1594f26b86da8a9a8ddd9b5ee5f3af0f96943 # v1
-        with:
-          version: 0.16.0
-
       - name: Build CLI
         shell: bash
         env:
-          SCRIPTC_CC: ${{ runner.os == 'Windows' && 'zigcc' || '' }}
-          SCRIPTC_TARGET: ${{ runner.os == 'Windows' && 'x86_64-windows-gnu' || '' }}
           PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
           PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
           PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ needs.release-iso.outputs.config_offset }}
         run: |
+          pnpm test
           pnpm build:cli
-          mv cli/dist/tailboot "cli/dist/${{ matrix.asset }}"
+          # Convert UTC CalVer to npm's three numeric version components.
+          version=$(node -e 'const [year, month, day, time] = process.env.PUBLIC_TAILBOOT_RELEASE.slice(1).split("."); console.log(`${Number(year)}.${Number(month)}.${Number(day + time)}`)')
+          cd cli
+          pnpm version "${version}" --no-git-tag-version --allow-same-version
+          pnpm test
+          pnpm pack
 
       - name: Upload CLI
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-${{ matrix.asset }}
-          path: cli/dist/${{ matrix.asset }}
+          name: npm-package
+          path: cli/*.tgz
 
   publish-release:
     needs: [release-iso, build-cli]
@@ -182,9 +169,8 @@ jobs:
       - name: Download release assets
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: release-*
+          name: release-iso
           path: dist
-          merge-multiple: true
 
       - name: Publish immutable release
         env:
@@ -233,8 +219,37 @@ jobs:
           fi
           gh release edit "${RELEASE_TAG}" --draft=false
 
+  publish-cli:
+    needs: [release-iso, build-cli, publish-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.release-iso.outputs.release_commit }}
+
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Download npm package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: npm-package
+          path: dist
+
+      - name: Publish CLI to npm
+        run: |
+          corepack enable
+          pnpm publish dist/*.tgz --access public --no-git-checks
+
   build-site:
-    needs: [release-iso, publish-release]
+    needs: [release-iso, publish-release, publish-cli]
     runs-on: ubuntu-latest
     permissions:
       contents: read

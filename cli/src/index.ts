@@ -1,9 +1,10 @@
+#!/usr/bin/env node
 import { Buffer } from "node:buffer";
 import { writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { z } from "zod";
 import { createIsoPatcher } from "../../tailboot-iso-core.ts";
-import { metadata } from "../dist/release.ts";
+import { metadata } from "./release.ts";
 
 async function main() {
   const args = process.argv.slice(2);

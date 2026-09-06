@@ -26,3 +26,6 @@ image/config/hooks/live/*
 !image/config/hooks/live/0200-autoboot.hook.binary
 image/config/hooks/normal/
 image/config/package-lists/live.list.chroot
+
+cli/src/release.ts
+cli/*.tgz

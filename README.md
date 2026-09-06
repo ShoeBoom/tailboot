@@ -76,6 +76,16 @@ apply to the tag.
 Your browser downloads the base ISO. It adds your configuration to the ISO in
 your browser. It does not send your credentials to the Tailboot server.
 
+Alternatively, with Node.js 24 or newer, use the CLI from npm:
+
+```sh
+npx tailboot@latest <auth-key> tailboot.iso
+```
+
+Add `--wifi-ssid "My network" --wifi-password "My password"` for Wi-Fi.
+The CLI downloads its matching base ISO and adds your credentials locally.
+See [the CLI README](cli/README.md) for installation instructions.
+
 ### 3. Write the ISO to a USB drive
 
 1. Use [Etcher](https://etcher.balena.io/), `dd`, or an equivalent ISO tool.
@@ -159,3 +169,32 @@ sudo ./image/scripts/build-iso.sh tailboot-local-amd64.iso
 ```
 
 The script writes the ISO to `image/dist/`.
+
+### CLI package and releases
+
+`pnpm build:cli` prepares the npm package, emitting JavaScript with TypeScript.
+It requires `PUBLIC_TAILBOOT_ISO_NAME`, `PUBLIC_TAILBOOT_RELEASE`, and
+`PUBLIC_TAILBOOT_CONFIG_OFFSET` from the verified ISO. Run
+`pnpm --filter tailboot test` after building to test an installed tarball.
+There are no native compiler or platform-specific CLI builds.
+
+The release workflow tests and packs `tailboot` before publishing the ISO,
+then publishes that exact package to npm after the ISO is available. The site is
+deployed after npm publishing succeeds. npm versions map the release tag
+`vYYYY.MM.DD.HHMMSS` to `YYYY.M.DHHMMSS`, removing leading zeroes from each
+numeric component (for example, `v2026.09.06.031757` becomes `2026.9.6031757`).
+
+For automated releases, configure the package's
+[trusted publisher](https://docs.npmjs.com/trusted-publishers/) in npm:
+GitHub Actions owner `ShoeBoom`, repository `tailboot`, workflow `release.yml`,
+with publishing allowed. The workflow uses pnpm 11 and OIDC; no npm token is
+stored in GitHub.
+
+To publish manually, build with verified release metadata, then run these
+commands in `cli/` while authenticated as the npm owner:
+
+```sh
+pnpm version <version> --no-git-tag-version --no-git-checks
+pnpm test
+pnpm publish --access public --no-git-checks
+```

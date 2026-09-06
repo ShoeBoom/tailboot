@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import { z } from "zod";
 
 const metadata = z.object({
@@ -11,5 +11,5 @@ const metadata = z.object({
   configOffset: process.env.PUBLIC_TAILBOOT_CONFIG_OFFSET,
 });
 
-await mkdir("dist", { recursive: true });
-await writeFile("dist/release.ts", `export const metadata = ${JSON.stringify(metadata)};\n`);
+await rm("dist", { recursive: true, force: true });
+await writeFile("src/release.ts", `export const metadata = ${JSON.stringify(metadata)};\n`);

@@ -1,14 +1,32 @@
 {
-  "name": "@tailboot/cli",
-  "private": true,
+  "name": "tailboot",
   "type": "module",
   "scripts": {
-    "build": "node build.ts && scriptc build src/index.ts --dynamic -o dist/tailboot"
-  },
-  "devDependencies": {
-    "scriptc": "0.0.36"
+    "build": "node build.ts && tsc -p tsconfig.json",
+    "test": "node --test test/package.test.ts"
   },
   "dependencies": {
     "zod": "^4.5.4"
+  },
+  "version": "2026.9.6033404",
+  "description": "Create a Tailboot ISO with your Tailscale and Wi-Fi configuration locally.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShoeBoom/tailboot.git",
+    "directory": "cli"
+  },
+  "bin": {
+    "tailboot": "dist/cli/src/index.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

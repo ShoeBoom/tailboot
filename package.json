@@ -1,12 +1,12 @@
 {
-  "name": "tailboot",
+  "name": "tailboot-workspace",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.20.0",
   "scripts": {
     "dev": "pnpm --filter @tailboot/site dev",
     "build": "pnpm test && tsc --noEmit && pnpm --filter @tailboot/site build",
-    "build:cli": "tsc --noEmit && pnpm --filter @tailboot/cli build",
+    "build:cli": "tsc --noEmit && pnpm --filter tailboot build",
     "preview": "pnpm --filter @tailboot/site preview",
     "test": "node --test tailboot-iso.test.ts"
   },
