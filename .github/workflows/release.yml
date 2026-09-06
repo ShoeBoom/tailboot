@@ -149,9 +149,17 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
 
+      - name: Set up Zig for Windows
+        if: runner.os == 'Windows'
+        uses: vercel-labs/setup-zig@83c1594f26b86da8a9a8ddd9b5ee5f3af0f96943 # v1
+        with:
+          version: 0.16.0
+
       - name: Build CLI
         shell: bash
         env:
+          SCRIPTC_CC: ${{ runner.os == 'Windows' && 'zigcc' || '' }}
+          SCRIPTC_TARGET: ${{ runner.os == 'Windows' && 'x86_64-windows-gnu' || '' }}
           PUBLIC_TAILBOOT_ISO_NAME: ${{ needs.release-iso.outputs.iso_name }}
           PUBLIC_TAILBOOT_RELEASE: ${{ needs.release-iso.outputs.release_tag }}
           PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ needs.release-iso.outputs.config_offset }}
