@@ -1,31 +1,32 @@
 import { Buffer } from "node:buffer";
 import { writeFileSync } from "node:fs";
-import { parseArgs } from "node:util";
+import { Command } from "commander";
 import { z } from "zod";
 import { createIsoPatcher } from "../../tailboot-iso-core.ts";
 import { metadata } from "../dist/release.ts";
 
 async function main() {
   const args = process.argv.slice(2);
-  if (args.length === 0 || args[0] === "--help") {
-    console.log("Usage: tailboot <auth-key> <output.iso> [--wifi-ssid <ssid> --wifi-password <password>]");
+  const program = new Command()
+    .name("tailboot")
+    .description("Download and customize a Tailboot ISO.")
+    .argument("<auth-key>", "Tailscale auth key")
+    .argument("[output.iso]", "path for the customized ISO", metadata.isoName)
+    .option("--wifi-ssid <ssid>", "Wi-Fi network name")
+    .option("--wifi-password <password>", "Wi-Fi password");
+  if (args.length === 0) {
+    program.outputHelp();
     return;
   }
-  const { values, positionals } = parseArgs({
-    args,
-    allowPositionals: true,
-    options: {
-      "wifi-ssid": { type: "string" },
-      "wifi-password": { type: "string" },
-    },
-  });
-  const positional = z.array(z.string().min(1)).length(2).parse(positionals);
+  program.parse(args, { from: "user" });
+  const values = program.opts<{ wifiSsid?: string; wifiPassword?: string }>();
+  const positional = z.array(z.string().min(1)).length(2).parse(program.processedArgs);
   const authKey = positional[0];
   const output = positional[1];
   const wifi = z.object({ ssid: z.string().min(1), password: z.string().min(1) }).optional()
-    .parse(values["wifi-ssid"] === undefined && values["wifi-password"] === undefined
+    .parse(values.wifiSsid === undefined && values.wifiPassword === undefined
       ? undefined
-      : { ssid: values["wifi-ssid"], password: values["wifi-password"] });
+      : { ssid: values.wifiSsid, password: values.wifiPassword });
   const config = { authKey, wifi };
   const url = `https://github.com/ShoeBoom/tailboot/releases/download/${encodeURIComponent(metadata.release)}/${encodeURIComponent(metadata.isoName)}`;
 
