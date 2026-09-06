@@ -128,6 +128,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.metadata.outputs.release_tag }}
           RELEASE_COMMIT: ${{ steps.metadata.outputs.release_commit }}
+          RELEASE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           CREATE_TAG: ${{ steps.metadata.outputs.create_tag }}
           ISO_NAME: ${{ steps.metadata.outputs.iso_name }}
         run: |
@@ -141,6 +142,7 @@ jobs:
             "image/dist/${ISO_NAME}" "image/dist/${ISO_NAME}.sha256" \
             image/dist/release.json \
             --draft --target "${RELEASE_COMMIT}" \
+            --notes "Source commit: ${RELEASE_COMMIT}. Workflow run: ${RELEASE_RUN_URL}." \
             --title "Tailboot ${RELEASE_TAG}" "${tag_args[@]}"
 
   build-cli:
@@ -221,6 +223,7 @@ jobs:
           PUBLIC_TAILBOOT_CONFIG_OFFSET: ${{ needs.build-iso.outputs.config_offset }}
 
   publish-release:
+    # Promote the tested assets only after every build and upload succeeds.
     needs: [build-iso, build-cli, build-site]
     runs-on: ubuntu-latest
     permissions:
@@ -240,6 +243,7 @@ jobs:
         run: bash .github/scripts/publish-release.sh
 
   deploy-site:
+    # A deployment failure can be retried alone using this run's Pages artifact.
     needs: [build-site, publish-release]
     runs-on: ubuntu-latest
     permissions:

@@ -205,6 +205,18 @@ architectures, including failed downloads and configuration errors.
 The ISO, CLI binaries, and website all build from the same source commit. Assets
 are staged in a new draft release. Publication waits for every build and test,
 then downloads the staged assets to verify their checksums and metadata. Only
-after publication does CI deploy the website. Failures leave the previous release
-and website available. Existing releases are never reused or overwritten; retry
-a failed release with a new tag (or a new manual workflow run).
+after publication does CI deploy the website. Each draft records the source
+commit and workflow run so failed attempts can be inspected. Publication promotes
+the tested assets without rebuilding them. Existing releases are never reused
+or overwritten.
+
+If an attempt fails before publication, leave its draft unpublished and inspect
+the linked workflow logs. Start a fresh attempt with a new tag or a new manual
+workflow run. The previous release and website remain available. Delete abandoned
+drafts manually when they are no longer useful; CI does not clean them up.
+
+If publication succeeds but website deployment fails, rerun only the
+`deploy-site` job in that workflow run. It deploys the same Pages artifact without
+rebuilding the website or changing the published release. The previous website
+stays available until deployment succeeds. If the Pages artifact has expired,
+start a fresh release attempt instead.
