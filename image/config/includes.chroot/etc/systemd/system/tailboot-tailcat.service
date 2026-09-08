@@ -1,0 +1,16 @@
+[Unit]
+Description=Accept SSH connections over Tailcat
+After=tailboot-configure.service NetworkManager.service
+Requires=tailboot-configure.service
+ConditionPathExists=/run/tailboot/tailcat.private.json
+
+[Service]
+User=tailboot
+WorkingDirectory=/home/tailboot
+LoadCredential=tailcat.private.json:/run/tailboot/tailcat.private.json
+ExecStart=/usr/bin/tailcat --key=%d/tailcat.private.json serve no-auth-ssh
+Restart=on-failure
+RestartSec=15s
+
+[Install]
+WantedBy=multi-user.target

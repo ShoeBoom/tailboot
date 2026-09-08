@@ -90,6 +90,14 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
+      - name: Install customizer test dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Verify Tailcat keys and SSH with the image binary
+        run: node image/scripts/test-tailcat.ts image/chroot/usr/bin/tailcat
+
       - name: Read configuration byte offset
         id: config
         run: |
@@ -98,7 +106,7 @@ jobs:
 
       - name: Test browser customizer against the built ISO
         run: |
-          node --test tailboot-iso.test.ts
+          pnpm test
           node image/scripts/test-iso-patch.ts \
             "image/dist/${{ steps.metadata.outputs.iso_name }}" "${{ steps.config.outputs.offset }}"
 

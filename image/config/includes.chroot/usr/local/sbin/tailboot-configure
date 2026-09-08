@@ -5,10 +5,16 @@ umask 077
 
 config=/run/live/medium/TAILBOOT.JSON
 
-jq -r '.authKey' "${config}" > /run/tailboot/auth.key
+jq -e '((.authKey // "") | length > 0) or (.tailcat != null)' "${config}" > /dev/null
+jq -r '.authKey // empty' "${config}" > /run/tailboot/auth.key
+if jq -e '.tailcat != null' "${config}" > /dev/null; then
+  jq '.tailcat' "${config}" > /run/tailboot/tailcat.private.json
+else
+  rm -f /run/tailboot/tailcat.private.json
+fi
 
-# Wi-Fi is optional: an error or hang must not prevent Ethernet and Tailscale
-# from starting. Keep auth-key extraction above outside this failure boundary.
+# Wi-Fi is optional: an error or hang must not prevent either connection route
+# from starting. Keep credential extraction above outside this failure boundary.
 if ! timeout --kill-after=1s 10s /usr/local/sbin/tailboot-wifi; then
   echo 'Tailboot Wi-Fi setup failed; continuing with Ethernet available.' >&2
 fi

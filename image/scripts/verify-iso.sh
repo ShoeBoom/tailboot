@@ -26,7 +26,7 @@ unsquashfs -cat "${work_dir}/filesystem.squashfs" var/lib/dpkg/status \
 
 # live-config creates the login account at boot, so it is not in the image's
 # /etc/passwd yet. Check its dependencies even with APT recommends disabled.
-for package in live-config live-config-systemd user-setup sudo tailscale jq network-manager wpasupplicant; do
+for package in live-config live-config-systemd user-setup sudo tailscale tailcat jq network-manager wpasupplicant; do
   if ! awk -v package="${package}" 'BEGIN { RS = "" }
     $0 ~ "(^|\n)Package: " package "(\n|$)" &&
     $0 ~ "(^|\n)Status: install ok installed(\n|$)" { found = 1 }
@@ -39,7 +39,7 @@ done
 
 unsquashfs -ll "${work_dir}/filesystem.squashfs" \
   > "${work_dir}/squashfs-files"
-for service in tailboot tailboot-configure; do
+for service in tailboot tailboot-configure tailboot-tailcat; do
   unsquashfs -cat "${work_dir}/filesystem.squashfs" \
     "etc/systemd/system/${service}.service" > "${work_dir}/${service}.service"
   cmp "${image_dir}/config/includes.chroot/etc/systemd/system/${service}.service" \
