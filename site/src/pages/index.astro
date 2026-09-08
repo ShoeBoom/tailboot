@@ -284,7 +284,9 @@ sudo -i</code></pre>
           showTailcatKey(generateTailcatKey());
           tailcatStatus.textContent = "New identity generated. Save its connection command.";
         } catch {
-          tailcatStatus.textContent = "Secure key generation failed. Use a browser with secure random-number support.";
+          tailcatStatus.textContent = tailcat
+            ? "Secure key generation failed. Your previous identity remains selected."
+            : "Secure key generation failed. Use a browser with secure random-number support.";
         }
       }
 
@@ -304,7 +306,10 @@ sudo -i</code></pre>
           tailcatImport.value = "";
           tailcatStatus.textContent = "Identity imported. Save its connection command.";
         } catch (error) {
-          tailcatStatus.textContent = error instanceof Error ? error.message : "Could not import the key.";
+          const message = error instanceof Error ? error.message : "Could not import the key.";
+          tailcatStatus.textContent = tailcat
+            ? `${message} Your previous identity remains selected.`
+            : message;
         }
       });
       document.querySelector("#tailcat-copy")!.addEventListener("click", async () => {
