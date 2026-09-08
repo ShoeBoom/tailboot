@@ -35,6 +35,15 @@ curl --fail --silent --show-error --location \
   https://pkgs.tailscale.com/stable/debian/trixie.asc \
   --output config/archives/tailscale.key.chroot
 
+# The browser implements this version's saved-key format. Verify upgrades
+# against test-tailcat.ts before changing the binary or its checksum.
+mkdir -p config/packages.chroot
+curl --fail --silent --show-error --location \
+  https://github.com/tailscale/tailcat/releases/download/v0.6.0/tailcat_0.6.0_linux_amd64.deb \
+  --output config/packages.chroot/tailcat.deb
+printf '%s\n' 'ad5a9ce4b16b6e9e1db254900452589114520d690a174d4dae6006450d870e43  config/packages.chroot/tailcat.deb' \
+  | sha256sum --check --strict
+
 lb config
 lb build
 

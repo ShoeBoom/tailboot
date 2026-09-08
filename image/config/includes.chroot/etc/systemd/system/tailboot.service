@@ -6,6 +6,7 @@ Requires=tailscaled.service tailboot-configure.service
 
 [Service]
 Type=oneshot
+ExecCondition=/usr/bin/test -s /run/tailboot/auth.key
 ExecStart=/usr/bin/tailscale up --auth-key=file:/run/tailboot/auth.key --ssh --timeout=2m
 RemainAfterExit=yes
 Restart=on-failure

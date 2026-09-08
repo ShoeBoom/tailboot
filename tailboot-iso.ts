@@ -1,11 +1,9 @@
 import { createIsoPatcher } from "./tailboot-iso-core.ts";
+import { validateTailbootConfig, type TailbootConfig } from "./tailboot-config.ts";
 
 export { CONFIG_PLACEHOLDER } from "./tailboot-iso-core.ts";
 
-export type TailbootConfig = {
-  authKey: string;
-  wifi?: { ssid: string; password: string };
-};
+export type { TailbootConfig } from "./tailboot-config.ts";
 
 type PatchOptions = {
   source: Blob | ReadableStream<Uint8Array>;
@@ -24,10 +22,11 @@ type PatchOptions = {
  */
 export async function patchTailbootIso(options: PatchOptions) {
   const { source, destination } = options;
+  const config = validateTailbootConfig(options.config);
   const stream = source instanceof Blob ? source.stream() : source;
   await stream
     .pipeThrough(new TransformStream(createIsoPatcher({
-      configBytes: new TextEncoder().encode(JSON.stringify(options.config)),
+      configBytes: new TextEncoder().encode(JSON.stringify(config)),
       configOffset: options.configOffset,
       onProgress: options.onProgress,
     })))

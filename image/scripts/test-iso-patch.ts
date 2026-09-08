@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { Writable } from "node:stream";
 
 import { CONFIG_PLACEHOLDER, patchTailbootIso } from "../../tailboot-iso.ts";
+import { generateTailcatKey } from "../../tailcat.ts";
 
 const iso = process.argv[2];
 assert.ok(iso, "Usage: node image/scripts/test-iso-patch.ts path/to/tailboot.iso byte-offset");
@@ -26,6 +27,7 @@ try {
   const patched = join(workDir, "patched.iso");
   const config = {
     authKey: "tskey-auth-test-key",
+    tailcat: generateTailcatKey(),
     wifi: { ssid: 'Café "网络" 📶', password: ' spaces " \\ $() `secret` ' },
   };
   // An odd chunk size exercises a slot split across download chunks.

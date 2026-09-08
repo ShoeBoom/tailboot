@@ -15,6 +15,7 @@ image/*.files
 image/*.iso
 image/*.packages
 image/config/archives/tailscale.key.chroot
+image/config/packages.chroot/*.deb
 image/config/binary
 image/config/bootstrap
 image/config/build

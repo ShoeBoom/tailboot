@@ -17,6 +17,7 @@
   }
 
   input,
+  textarea,
   button {
     border-width: 1px;
     border-color: #767676;
